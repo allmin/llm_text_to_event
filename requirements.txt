@@ -1,0 +1,12 @@
+pandas
+sentence-transformers
+ollama
+faiss-cpu
+regex
+spacy
+streamlit
+openpyxl
+python-dotenv
+matplotlib
+seaborn
+nltk
