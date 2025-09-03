@@ -1,4 +1,4 @@
-# Event Log Extraction from Text
+# USing LLM to extract events from text
 
 This project focuses on extracting event logs from textual data, specifically using MIMIC-III CSV files.
 
