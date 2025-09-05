@@ -9,6 +9,7 @@ import pandas as pd
 import sys, os
 from itertools import product
 import time
+from tqdm import tqdm
 
 parent_dir = os.path.abspath(os.path.join(os.getcwd(), '..'))
 if parent_dir not in sys.path:
@@ -425,7 +426,7 @@ class EventExtractor:
         self.event_name_prompt_list = []
         self.raw_outputs = []
         self.attributes = []
-        for ind, text in enumerate(self.texts):
+        for ind, text in tqdm(enumerate(self.texts)):
             start_time = time.perf_counter()
             if self.event_descriptions:
                 event_w_description = self.event_descriptions
