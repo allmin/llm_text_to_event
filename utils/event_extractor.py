@@ -76,7 +76,7 @@ class EventExtractor:
         combinations = ['_'.join(p) for p in product(*all_form_dict.values())]
         return combinations
     
-    def extract_events(self, sentences, event_names, event_descriptions=None, threshold=0.2, 
+    def extract_events(self, texts, event_names, event_descriptions=None, threshold=0.2, 
                        attribute_description_dict = None, examples="", attribute_output=False,
                        prompt_evidence={'keywords':[],'event_names':[],'similarities':[]},
                        keyword_output=False, phrase_output=False, 
@@ -85,17 +85,17 @@ class EventExtractor:
                        embedder_method=1):
         self.event_list = []
         self.embedder_method=embedder_method
-        self.sentences = sentences
+        self.texts = texts
         self.event_descriptions = event_descriptions
         self.examples = examples
         self.attribute_description_dict = attribute_description_dict
-        self.similarities_dict = [{}]*len(self.sentences)
-        self.attributes = [""]*len(self.sentences)
-        self.keywords = [""]*len(self.sentences)
-        self.phrases = [""]*len(self.sentences)
-        self.raw_outputs = [""]*len(self.sentences)
-        self.lemmas = [""]*len(self.sentences)
-        self.event_name_prompt_list = [""]*len(self.sentences)
+        self.similarities_dict = [{}]*len(self.texts)
+        self.attributes = [""]*len(self.texts)
+        self.keywords = [""]*len(self.texts)
+        self.phrases = [""]*len(self.texts)
+        self.raw_outputs = [""]*len(self.texts)
+        self.lemmas = [""]*len(self.texts)
+        self.event_name_prompt_list = [""]*len(self.texts)
         self.predefined_event_names = event_names
         self.predefined_event_names_w_unknown = event_names + ["Unknown"]
         self.threshold = threshold
@@ -110,40 +110,40 @@ class EventExtractor:
         self.extract_event_names()
         self.extract_attributes()
         if len(self.event_detection_time) == 0:
-            self.event_detection_time = [""]*len(self.sentences)
-        assert len(self.sentences) == len(self.predicted_events) == len(self.similarities_dict) == len(self.keywords) == len(self.attributes) == len(self.phrases) == len(self.lemmas) == len(self.attribute_dict_list) == len(self.event_name_prompt_list) == len(self.raw_outputs) == len(self.event_detection_time), \
-            f"{len(self.sentences)}, {len(self.predicted_events)}, {len(self.similarities_dict)}, {len(self.keywords)}, {len(self.attributes)}, {len(self.phrases)}, {len(self.lemmas)}, {len(self.attribute_dict_list)}, {len(self.event_name_prompt_list)} ,{len(self.raw_outputs)} ,{len(self.event_detection_time)}"
-        for sentence, event, similarity_dict, keyword, attribute, phrase, lemma, attribute_dict, prompt, raw_output, time in zip(self.sentences, self.predicted_events, self.similarities_dict, self.keywords, self.attributes, self.phrases, self.lemmas, self.attribute_dict_list, self.event_name_prompt_list , self.raw_outputs, self.event_detection_time):
+            self.event_detection_time = [""]*len(self.texts)
+        assert len(self.texts) == len(self.predicted_events) == len(self.similarities_dict) == len(self.keywords) == len(self.attributes) == len(self.phrases) == len(self.lemmas) == len(self.attribute_dict_list) == len(self.event_name_prompt_list) == len(self.raw_outputs) == len(self.event_detection_time), \
+            f"{len(self.texts)}, {len(self.predicted_events)}, {len(self.similarities_dict)}, {len(self.keywords)}, {len(self.attributes)}, {len(self.phrases)}, {len(self.lemmas)}, {len(self.attribute_dict_list)}, {len(self.event_name_prompt_list)} ,{len(self.raw_outputs)} ,{len(self.event_detection_time)}"
+        for text, event, similarity_dict, keyword, attribute, phrase, lemma, attribute_dict, prompt, raw_output, time in zip(self.texts, self.predicted_events, self.similarities_dict, self.keywords, self.attributes, self.phrases, self.lemmas, self.attribute_dict_list, self.event_name_prompt_list , self.raw_outputs, self.event_detection_time):
             if self.event_name_model_type == "biolord":
-                self.event_list.append({"sentence":sentence, "event":event, "similarity":similarity_dict, "attributes": attribute_dict, "event_detection_time":time})
+                self.event_list.append({"text":text, "event":event, "similarity":similarity_dict, "attributes": attribute_dict, "event_detection_time":time})
             elif self.event_name_model_type == "dictionary":
-                self.event_list.append({"sentence":sentence, "event":event, "keyword":keyword, "lemma":lemma, "attributes": attribute_dict, "event_detection_time":time})
+                self.event_list.append({"text":text, "event":event, "keyword":keyword, "lemma":lemma, "attributes": attribute_dict, "event_detection_time":time})
             elif self.event_name_model_type == "llama3":
-                self.event_list.append({"sentence":sentence, "event":event, "attribute":attribute, "phrase":phrase, "raw_output":raw_output,"attributes": attribute_dict, "event_name_prompt":prompt, "event_detection_time":time})
+                self.event_list.append({"text":text, "event":event, "attribute":attribute, "phrase":phrase, "raw_output":raw_output,"attributes": attribute_dict, "event_name_prompt":prompt, "event_detection_time":time})
             else:
-                self.event_list.append({"sentence":sentence, "event":event, "attributes": attribute_dict, "event_detection_time":time})
+                self.event_list.append({"text":text, "event":event, "attributes": attribute_dict, "event_detection_time":time})
         return self.event_list
     
     
-    def extract_attributes_given_event(self, sentence, event_name, skip_others=True):
+    def extract_attributes_given_event(self, text, event_name, skip_others=True):
         attributes_dict = {}
         if skip_others and event_name == "Unknown":
             return attributes_dict
         if self.attribute_model_type != "llama3":
             return attributes_dict
-        if sentence in self.event_name_cache:
-            print("skipping LLM since sentence found in cache")
-            return self.event_name_cache[sentence]
+        if text in self.event_name_cache:
+            print("skipping LLM since text found in cache")
+            return self.event_name_cache[text]
         prompt = f"""You are an expert medical language model that extracts structured data from clinical notes.
 
-            Given a sentence that describes a patient-related {event_name} event, your task is to:
+            Given a text that describes a patient-related {event_name} event, your task is to:
             1. Detect the relevant attribute types associated with that event (e.g., location, quality, duration, time, medication, dosage, etc.).
-            2. Extract the corresponding attribute values from the sentence.
+            2. Extract the corresponding attribute values from the text.
 
             Only extract attributes that are explicitly mentioned. Do not infer missing information.
 
-            ### Input Sentence:
-            "{sentence}"
+            ### Input text:
+            "{text}"
 
             ### Output Format:
             {{  "<attribute_type_1>": "<attribute_value_1>",
@@ -161,27 +161,27 @@ class EventExtractor:
             attributes_dict = json.loads(json_response)
         except Exception as e:
             attributes_dict = {"ERROR":e, "input":json_response}
-            self.error_logs.append(["is-event", sentence, attributes_dict ])
-        self.event_name_cache[sentence] = attributes_dict
+            self.error_logs.append(["is-event", text, attributes_dict ])
+        self.event_name_cache[text] = attributes_dict
         return attributes_dict
     
-    def extract_event_attributes_given_is_event(self, sentence, is_event):
+    def extract_event_attributes_given_is_event(self, text, is_event):
         event_names = {}
         attributes_dict = {"event_name":"None", "attributes":{}}
         if is_event == "false":
             return attributes_dict
         if self.attribute_model_type != "llama3":
             return attributes_dict
-        if sentence in self.event_attribute_cache:
-            return self.event_attribute_cache[sentence]
+        if text in self.event_attribute_cache:
+            return self.event_attribute_cache[text]
         prompt = f"""You are an expert medical language model that extracts structured data from clinical notes.
-            Given a sentence that describes a patient-related event among {self.predefined_event_names}, your task is to:
-            1. Detect the main event in the sentence among {self.predefined_event_names}. If nothing applies, set it as "Unknown".
+            Given a text that describes a patient-related event among {self.predefined_event_names}, your task is to:
+            1. Detect the main event in the text among {self.predefined_event_names}. If nothing applies, set it as "Unknown".
             2. Detect the relevant attribute types associated with that main event (e.g., location, quality, duration, time, medication, dosage, etc.).
-            3. Extract the corresponding attribute values from the sentence.
+            3. Extract the corresponding attribute values from the text.
             Only extract attributes that are explicitly mentioned. Do not infer missing information.
-            ### Input Sentence:
-            "{sentence}"
+            ### Input text:
+            "{text}"
 
             ### Output Format:
             {{  "event_name": "<name_of_main_event>",
@@ -200,9 +200,9 @@ class EventExtractor:
             if attributes_dict == {}:
                 attributes_dict = {"event_name":"None", "attributes":{}}
         except Exception as e:
-            self.error_logs.append(["event-attribute",sentence, json_response])
+            self.error_logs.append(["event-attribute",text, json_response])
             attributes_dict={"event_name":"Error", "attributes":json_response}
-        self.event_attribute_cache[sentence] = attributes_dict
+        self.event_attribute_cache[text] = attributes_dict
         return attributes_dict
 
     
@@ -226,36 +226,36 @@ class EventExtractor:
         self.event_detection_time = []
         self.keywords = []
         self.lemmas = []
-        for ind,sentence in enumerate(self.sentences):
+        for ind,text in enumerate(self.texts):
             start_time = time.perf_counter()
-            sentence_events = []
-            sentence_keywords = []
-            sentence_lemmas = []
-            if sentence in self.event_name_cache:
-                self.predicted_events.append(self.event_name_cache[sentence])
-                self.keywords.append(self.keywords_cache[sentence])
-                self.lemmas.append(self.lemmas_cache[sentence])
+            text_events = []
+            text_keywords = []
+            text_lemmas = []
+            if text in self.event_name_cache:
+                self.predicted_events.append(self.event_name_cache[text])
+                self.keywords.append(self.keywords_cache[text])
+                self.lemmas.append(self.lemmas_cache[text])
             else:
                 for index,(keyword, event_name_lemma_dict) in enumerate(self.dictionary.items()):
                     keyword_w_space = keyword.replace('_', ' ')
-                    if re.search(rf'\b{re.escape(keyword_w_space)}\b', sentence, re.IGNORECASE):
-                        num_of_occurrence = len(re.findall(rf'\b{re.escape(keyword_w_space)}\b', sentence, re.IGNORECASE))
+                    if re.search(rf'\b{re.escape(keyword_w_space)}\b', text, re.IGNORECASE):
+                        num_of_occurrence = len(re.findall(rf'\b{re.escape(keyword_w_space)}\b', text, re.IGNORECASE))
                         event_name = event_name_lemma_dict['event_type']
                         lemma = event_name_lemma_dict['lemma']
                         for i in range(num_of_occurrence):
-                            sentence_events.append(event_name)
-                            sentence_keywords.append(keyword_w_space)
-                            sentence_lemmas.append(lemma)
-                if len(sentence_events)==0 and index==len(self.dictionary)-1:
-                    sentence_events = ["Unknown"]
-                    sentence_keywords = [""]
-                    sentence_lemmas = [""]
-                self.predicted_events.append(sentence_events)
-                self.keywords.append(sentence_keywords)
-                self.lemmas.append(sentence_lemmas)
-                self.event_name_cache[sentence] = sentence_events
-                self.keywords_cache[sentence] = sentence_keywords
-                self.lemmas_cache[sentence] = sentence_lemmas
+                            text_events.append(event_name)
+                            text_keywords.append(keyword_w_space)
+                            text_lemmas.append(lemma)
+                if len(text_events)==0 and index==len(self.dictionary)-1:
+                    text_events = ["Unknown"]
+                    text_keywords = [""]
+                    text_lemmas = [""]
+                self.predicted_events.append(text_events)
+                self.keywords.append(text_keywords)
+                self.lemmas.append(text_lemmas)
+                self.event_name_cache[text] = text_events
+                self.keywords_cache[text] = text_keywords
+                self.lemmas_cache[text] = text_lemmas
             end_time = time.perf_counter()  # End timing
             elapsed_time = end_time - start_time
             self.event_detection_time.append(elapsed_time)
@@ -264,13 +264,13 @@ class EventExtractor:
     def extract_attributes(self):
         self.attribute_dict_list = []
         if self.event_name_known:
-            for event_name, sentence in zip(self.predicted_events, self.sentences):
-                self.attribute_dict_list.append(self.extract_attributes_given_event(sentence,event_name))
+            for event_name, text in zip(self.predicted_events, self.texts):
+                self.attribute_dict_list.append(self.extract_attributes_given_event(text,event_name))
 
         else:
             self.predicted_events = []
-            for is_event, sentence in zip(self.is_events, self.sentences):
-                self.result = self.extract_event_attributes_given_is_event(sentence,is_event)
+            for is_event, text in zip(self.is_events, self.texts):
+                self.result = self.extract_event_attributes_given_is_event(text,is_event)
                 if "attributes" not in self.result:
                     self.result['attributes'] = {}
                 if "event_name" not in self.result:
@@ -286,11 +286,11 @@ class EventExtractor:
         self.similarities = []
         start_time = time.perf_counter()
         
-        self.sentence_embeddings = self.model.encode(self.sentences, normalize_embeddings=True)
+        self.text_embeddings = self.model.encode(self.texts, normalize_embeddings=True)
         self.label_embeddings = self.model.encode(self.predefined_event_names, normalize_embeddings=True)
 
         # FAISS expects float32
-        query_vecs = np.array(self.sentence_embeddings).astype('float32')
+        query_vecs = np.array(self.text_embeddings).astype('float32')
         label_vecs = np.array(self.label_embeddings).astype('float32')
         
         if use_faiss:
@@ -299,7 +299,7 @@ class EventExtractor:
             self.index = faiss.IndexFlatIP(dim)  # Inner Product = Cosine if vectors are normalized
             self.index.add(label_vecs)
 
-            # Perform search: top-1 similar label per sentence
+            # Perform search: top-1 similar label per text
             self.similarities, self.indices = self.index.search(query_vecs, 1)
             self.predicted_events = self.get_event_names(self.threshold)
             self.event_name_known = True
@@ -321,9 +321,9 @@ class EventExtractor:
                 self.similarities = np.dot(query_vecs, label_vecs.T)
         end_time = time.perf_counter()
         elapsed_time = end_time - start_time
-        time_per_sentence = elapsed_time/len(self.sentences)
+        time_per_text = elapsed_time/len(self.texts)
         self.predicted_events = [i.split(' : ')[0] for i in self.predicted_events]
-        self.event_detection_time = [time_per_sentence]*len(self.sentences)
+        self.event_detection_time = [time_per_text]*len(self.texts)
 
     def get_event_names(self, threshold):
         indices = [
@@ -351,13 +351,13 @@ class EventExtractor:
     
     def extract_is_event_llama(self):
         self.is_events = []
-        for sentence in self.sentences:
-            if sentence in self.is_event_cache:
-                self.is_events.append(self.is_event_cache[sentence])
+        for text in self.texts:
+            if text in self.is_event_cache:
+                self.is_events.append(self.is_event_cache[text])
             else:
-                prompt = f"""Does this sentence describe an activity related to any of {self.predefined_event_names}?. 
+                prompt = f"""Does this text describe an activity related to any of {self.predefined_event_names}?. 
                 Output ONLY a JSON: {{"is_activity":<boolean>}}
-                Sentence: {sentence}"""
+                text: {text}"""
                 json_response, raw_output = self.get_json_response(prompt)
                 try:
                     json_dict = json.loads(json_response)
@@ -369,7 +369,7 @@ class EventExtractor:
                             is_event = False
                 except json.JSONDecodeError:
                     is_event = False
-                self.is_event_cache[sentence]=is_event
+                self.is_event_cache[text]=is_event
                 self.is_events.append(is_event)
     
     def get_evidence(self,ind=None):
@@ -387,34 +387,34 @@ class EventExtractor:
             and assigned event type: {event_evidence}.""" + additional_facts_clause
         elif self.keyword_input==False and self.embedder_input==True:
             evidence = f"""Additional facts:
-            A sentence embedder, assigned following similarity score to  
+            A text embedder, assigned following similarity score to  
             each of the event type labels: {similarities}.""" + additional_facts_clause
         elif self.keyword_input==True and self.embedder_input==True:
             evidence = f"""Additional facts:
             A keyword matching algorithm without context, detected keyword(s): {keyword_evidence}
             and assigned event type: {event_evidence}
-            A sentence embedder, assigned following similarity score to  
+            A text embedder, assigned following similarity score to  
             each of the event type labels: {similarities}.""" + additional_facts_clause       
         return evidence 
     
     def get_task_description(self):
         task_description = []
-        task_description.append("Identify ALL events in the sentence (zero, one, or more).")
+        task_description.append("Identify ALL events in the text (zero, one, or more).")
         task_description.append("For each event, assign an event_type from the list above.")
         if self.attribute_output:
             task_description.append("Extract attributes for each event using ONLY the allowed attributes listed below.")
         if self.keyword_input:
-            task_description.append("Use keyword evidence (Ki) ONLY if it is consistent with the sentence context.")
+            task_description.append("Use keyword evidence (Ki) ONLY if it is consistent with the text context.")
         task_description.append("Output strictly valid JSON following the schema below.")
         task_description = "\n".join([f"{i}. {task}" for i,task in enumerate(task_description)])
         return task_description
     
     def get_classification_results(self):
         classification_rules = []
-        classification_rules.append("- A sentence may contain multiple events of the same or different types.")
+        classification_rules.append("- A text may contain multiple events of the same or different types.")
         classification_rules.append("- Create a separate event object for each event mention.")
-        classification_rules.append("- If the sentence is explicitly a NEGATION (e.g., \"denies pain\"), do not extract that event.")
-        classification_rules.append("- If the sentence describes a FUTURE or HYPOTHETICAL event (e.g., \"will eat tomorrow\"), ignore it.")
+        classification_rules.append("- If the text is explicitly a NEGATION (e.g., \"denies pain\"), do not extract that event.")
+        classification_rules.append("- If the text describes a FUTURE or HYPOTHETICAL event (e.g., \"will eat tomorrow\"), ignore it.")
         classification_rules.append("""- If no events are found, return {"events": []}""")
         classification_rules = "\n".join(classification_rules)
         return classification_rules
@@ -425,7 +425,7 @@ class EventExtractor:
         self.event_name_prompt_list = []
         self.raw_outputs = []
         self.attributes = []
-        for ind, sentence in enumerate(self.sentences):
+        for ind, text in enumerate(self.texts):
             start_time = time.perf_counter()
             if self.event_descriptions:
                 event_w_description = self.event_descriptions
@@ -467,7 +467,7 @@ class EventExtractor:
                         """
             examples = self.examples if self.example_input else ""
             
-            prompt = f"""Given the sentence: {sentence}, 
+            prompt = f"""Given the text: {text}, 
                         and the following event types with their definitions: {event_w_description} 
                         ---
                         Your task:
@@ -486,11 +486,11 @@ class EventExtractor:
                         
                         {examples}
                         """
-            if sentence in self.event_name_cache:
-                self.predicted_events.append(self.event_name_cache[sentence])
-                self.attributes.append(self.attributes_cache[sentence])
-                self.phrases.append(self.phrases_cache[sentence])
-                self.raw_outputs.append(self.raw_output_cache[sentence])
+            if text in self.event_name_cache:
+                self.predicted_events.append(self.event_name_cache[text])
+                self.attributes.append(self.attributes_cache[text])
+                self.phrases.append(self.phrases_cache[text])
+                self.raw_outputs.append(self.raw_output_cache[text])
             else:                
                 json_response, raw_output = self.get_json_response(prompt)
                 if json_response:
@@ -506,9 +506,9 @@ class EventExtractor:
                 self.predicted_events.append(event_name)
                 self.attributes.append(attributes)
                 self.raw_outputs.append(raw_output)
-                self.event_name_cache[sentence]=event_name
-                self.attributes_cache[sentence]=attributes
-                self.raw_output_cache[sentence]=raw_output
+                self.event_name_cache[text]=event_name
+                self.attributes_cache[text]=attributes
+                self.raw_output_cache[text]=raw_output
             self.event_name_prompt_list.append(prompt)
             end_time = time.perf_counter()
             elapsed_time = end_time - start_time
@@ -529,13 +529,13 @@ class EventExtractor:
         return lemma_data
     
 if __name__ == "__main__":
-    msentences = ["He slept well","He slept well","He began to break bread","Trigonometry"]
-    msentences = ["at midnight after being asleep in bed for several hours patient awoke coughing unable to raise unless sitting up in chair",
+    mtexts = ["He slept well","He slept well","He began to break bread","Trigonometry"]
+    mtexts = ["at midnight after being asleep in bed for several hours patient awoke coughing unable to raise unless sitting up in chair",
                   "labile bp, apnea ventilation when asleep even when off sedation, vent mode changed to mmv by rt",
                   "patient restless and agitated @ times, pulling cpap off, more cooperative when medicated, short periods of apnea noted when off cpap, will attempt to keep patient on cpap when asleep",
                   "asleep ft on aggressive pulm toilet done cpt with effect bs controlled with insulin drops and prn boluses [**md number(3) **] output great lasix tid cont to monitor cr and renal fx"]
-    msentences = ["""had difficulty falling asleep but refused serax. became disoriented from 3:00-5:00, knew he was still in hospital but asked about, "the dog in the room."""]
-#     msentences = ['bp lower when asleep',
+    mtexts = ["""had difficulty falling asleep but refused serax. became disoriented from 3:00-5:00, knew he was still in hospital but asked about, "the dog in the room."""]
+#     mtexts = ['bp lower when asleep',
 #  'sleeping in naps',
 #  'slept well',
 #  'sleeping in long naps',
@@ -552,25 +552,25 @@ if __name__ == "__main__":
                                   "Sleep : A natural and periodic state of rest during which consciousness of the world is suspended."]
 
     DICT = EventExtractor(event_name_model_type='dictionary', attribute_model_type='None')
-    DICT.extract_events(sentences=msentences, event_names=mevent_names)
+    DICT.extract_events(texts=mtexts, event_names=mevent_names)
     print("Dictionary_events:",DICT.event_list)
     BIOLORD = EventExtractor(event_name_model_type='biolord', attribute_model_type='None')
-    BIOLORD.extract_events(sentences=msentences, event_names=mevent_names)
+    BIOLORD.extract_events(texts=mtexts, event_names=mevent_names)
     print("BIOLORD_events:",[i['Sleep'] for i in BIOLORD.similarities_dict])
 
     BIOLORD = EventExtractor(event_name_model_type='biolord', attribute_model_type='None')
-    BIOLORD.extract_events(sentences=msentences, event_names=event_names_w_descriptions)
+    BIOLORD.extract_events(texts=mtexts, event_names=event_names_w_descriptions)
     print("BIOLORD_events:",[i['Sleep'] for i in BIOLORD.similarities_dict])
 
 
     
     # LLAMA1 = EventExtractor(event_name_model_type='llama3', attribute_model_type='None')
     
-    # LLAMA1.extract_events(sentences=msentences, event_names=mevent_names)
+    # LLAMA1.extract_events(texts=mtexts, event_names=mevent_names)
     # print("LLAMA_no_evidence_events:",LLAMA1.event_list)
     from config import event_types, event_description_dict_llm, event_attributes_dict_llm, examples
     LLAMA2 = EventExtractor(event_name_model_type='llama3', attribute_model_type='None')   
-    LLAMA2.extract_events(sentences=msentences, event_names=mevent_names, 
+    LLAMA2.extract_events(texts=mtexts, event_names=mevent_names, 
                                 event_descriptions=event_description_dict_llm,
                                 prompt_evidence={'keywords':DICT.keywords, 
                                                  'event_names':DICT.predicted_events, 
