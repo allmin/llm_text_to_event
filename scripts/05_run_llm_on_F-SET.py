@@ -5,14 +5,15 @@ from itertools import product
 from glob import glob
 
 parent_dir = os.path.abspath(os.path.join(os.getcwd(), '..'))
+
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 from utils.event_extractor import EventExtractor
-from config import event_types, event_description_dict_llm
+from config import event_types, event_description_dict_llm, llm_type
 
-def extract_events_funct(sentences, extractor=None, evidence={'keywords':[],'event_names':[],'similarities':[]}, keyword_input=None, example_input=None, attribute_output=None):
+def extract_events_funct(texts, extractor=None, evidence={'keywords':[],'event_names':[],'similarities':[]}, keyword_input=None, example_input=None, attribute_output=None):
     global event_description_dict_llm, event_types
-    events = extractor.extract_events(sentences=sentences, event_names=event_types, event_descriptions=event_description_dict_llm, threshold=0.2, prompt_evidence=evidence, keyword_input=keyword_input, example_input=example_input, attribute_output=attribute_output)
+    events = extractor.extract_events(texts=texts, event_names=event_types, event_descriptions=event_description_dict_llm, threshold=0.2, prompt_evidence=evidence, keyword_input=keyword_input, example_input=example_input, attribute_output=attribute_output)
     return events
 
 def get_col_suffix(keyword_input, example_input):
@@ -24,10 +25,13 @@ def get_col_suffix(keyword_input, example_input):
     elif not keyword_input and example_input:
         col_suffix = "example"
     return col_suffix
+
+
+
 for ET in ['Sleep','Excretion','Eating','Family','Pain']:    
     for attribute_output in [True, False]:
     
-        os.makedirs(f"../exports/llm/{ET}", exist_ok=True)
+        os.makedirs(f"../exports/llm_{llm_type}/{ET}", exist_ok=True)
         try:
             file = glob(f"../exports/groundtruth/F-SET/Generated/{ET}*.pkl")[0]
         except:
@@ -44,16 +48,17 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain']:
         evidence={'keywords':disagreement_df_temp.Keyword.tolist(), 'event_names':disagreement_df_temp.Event_Name_dictionary.tolist(), 'similarities':disagreement_df_temp.Similarity.tolist()}
         for keyword_input, example_input in [i for i in product([True,False],[True,False])]:
             col_suffix = get_col_suffix(keyword_input, example_input)
-            disagreement_df_temp.loc[:,f"LLM_Events_{col_suffix}_evidence"] = extract_events_funct(disagreement_df_temp.Sentence_dictionary,
+            disagreement_df_temp.loc[:,f"LLM_Events_{col_suffix}_evidence"] = extract_events_funct(texts=disagreement_df_temp.Sentence_dictionary,
                                                                                                    extractor=EventExtractor(
-                                                                                                       event_name_model_type="llama3",
-                                                                                                       attribute_model_type="None"
+                                                                                                       event_name_model_type="llm",
+                                                                                                       attribute_model_type="None",
+                                                                                                       llm_type=llm_type,
                                                                                                        ),
                                                                                                    keyword_input=keyword_input,
                                                                                                    attribute_output=attribute_output,
                                                                                                    evidence=evidence)
             disagreement_df_temp.loc[:,f"Event_Name_LLM_Events_{col_suffix}_evidence"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence"].apply(lambda x: x['event'])
             disagreement_df_temp.loc[:,f"rAttribute_LLM_Events_{col_suffix}_evidence"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence"].apply(lambda x: x['attribute'])
-            disagreement_df_temp.to_excel(f"../exports/llm/{ET}/{file_name}_att_{attribute_output}.xlsx", index=False)
-            disagreement_df_temp.to_pickle(f"../exports/llm/{ET}/{file_name}_att_{attribute_output}.pkl")
+            disagreement_df_temp.to_excel(f"../exports/llm_{llm_type}/{ET}/{file_name}_att_{attribute_output}.xlsx", index=False)
+            disagreement_df_temp.to_pickle(f"../exports/llm_{llm_type}/{ET}/{file_name}_att_{attribute_output}.pkl")
             

@@ -17,6 +17,7 @@ if parent_dir not in sys.path:
 
 class EventExtractor:
     def __init__(self, is_event_model_type=None, event_name_model_type=None, attribute_model_type=None, dictionary_file=None, llm_type=None):
+    def __init__(self, is_event_model_type=None, event_name_model_type=None, attribute_model_type=None, dictionary_file=None, llm_type=None):
         self.event_name_model_type = event_name_model_type
         self.event_name_known = False
         self.event_detection_time = []
@@ -41,6 +42,16 @@ class EventExtractor:
             self.dictionary_expanded_df.sort_values(by=['event_type','form'],ascending = True, inplace=True)
             self.dictionary_expanded_df.to_excel(dictionary_file.rstrip(".xlsx")+"_expanded.xlsx", index=False)
             self.dictionary = {form:{'event_type':event_type, 'lemma':lemma} for form,event_type,lemma in zip(self.dictionary_expanded_df['form'], self.dictionary_expanded_df['event_type'], self.dictionary_expanded_df['lemma'])}
+        
+        elif event_name_model_type == "llm":          
+            if not llm_type:
+                self.llm_type = "llama3.1:8b"  # Default model
+            else:
+                self.llm_type = llm_type
+            
+            # self.llm_type = "llama3.1:70b" --- IGNORE ---
+            print(f"Using Ollama model: {self.llm_type}")
+        
         
         elif event_name_model_type == "llm":
             try:
