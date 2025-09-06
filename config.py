@@ -1,3 +1,4 @@
+llm_type = "llama3.1:70b"
 event_types = ["Pain", "Sleep", "Excretion", "Eating", "Family"]
 event_description_dict_embedder = {"Eating":"To take food into the body by mouth",
                               "Excretion":"Waste matter discharged from the body s feces or urine",

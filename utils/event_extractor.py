@@ -16,7 +16,7 @@ if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
 class EventExtractor:
-    def __init__(self, is_event_model_type=None, event_name_model_type=None, attribute_model_type=None, dictionary_file=None):
+    def __init__(self, is_event_model_type=None, event_name_model_type=None, attribute_model_type=None, dictionary_file=None, llm_type=None):
         self.event_name_model_type = event_name_model_type
         self.event_name_known = False
         self.event_detection_time = []
@@ -41,7 +41,16 @@ class EventExtractor:
             self.dictionary_expanded_df.sort_values(by=['event_type','form'],ascending = True, inplace=True)
             self.dictionary_expanded_df.to_excel(dictionary_file.rstrip(".xlsx")+"_expanded.xlsx", index=False)
             self.dictionary = {form:{'event_type':event_type, 'lemma':lemma} for form,event_type,lemma in zip(self.dictionary_expanded_df['form'], self.dictionary_expanded_df['event_type'], self.dictionary_expanded_df['lemma'])}
-               
+        
+        elif event_name_model_type == "llm":          
+            if not llm_type:
+                self.llm_type = "llama3.1:8b"  # Default model
+            else:
+                self.llm_type = llm_type
+            
+            # self.llm_type = "llama3.1:70b" --- IGNORE ---
+            print(f"Using Ollama model: {self.llm_type}")
+        
         self.is_event_cache = {}
         self.event_name_cache = {}
         self.attributes_cache = {}
@@ -119,7 +128,7 @@ class EventExtractor:
                 self.event_list.append({"text":text, "event":event, "similarity":similarity_dict, "attributes": attribute_dict, "event_detection_time":time})
             elif self.event_name_model_type == "dictionary":
                 self.event_list.append({"text":text, "event":event, "keyword":keyword, "lemma":lemma, "attributes": attribute_dict, "event_detection_time":time})
-            elif self.event_name_model_type == "llama3":
+            elif self.event_name_model_type == "llm":
                 self.event_list.append({"text":text, "event":event, "attribute":attribute, "phrase":phrase, "raw_output":raw_output,"attributes": attribute_dict, "event_name_prompt":prompt, "event_detection_time":time})
             else:
                 self.event_list.append({"text":text, "event":event, "attributes": attribute_dict, "event_detection_time":time})
@@ -130,7 +139,7 @@ class EventExtractor:
         attributes_dict = {}
         if skip_others and event_name == "Unknown":
             return attributes_dict
-        if self.attribute_model_type != "llama3":
+        if self.attribute_model_type != "llm":
             return attributes_dict
         if text in self.event_name_cache:
             print("skipping LLM since text found in cache")
@@ -171,7 +180,7 @@ class EventExtractor:
         attributes_dict = {"event_name":"None", "attributes":{}}
         if is_event == "false":
             return attributes_dict
-        if self.attribute_model_type != "llama3":
+        if self.attribute_model_type != "llm":
             return attributes_dict
         if text in self.event_attribute_cache:
             return self.event_attribute_cache[text]
@@ -209,13 +218,13 @@ class EventExtractor:
     
     
     def extract_is_event(self):
-        if self.is_event_model_type == "llama3":
+        if self.is_event_model_type == "llm":
             self.extract_is_event_llama()
 
     def extract_event_names(self):
         if self.event_name_model_type == "biolord":
             self.extract_event_names_biolord()
-        if self.event_name_model_type == "llama3":
+        if self.event_name_model_type == "llm":
             self.extract_event_names_llama()
         if self.event_name_model_type == "dictionary":
             self.dictionary = {form:values for (form,values) in self.dictionary.items() if values["event_type"] in self.predefined_event_names}
@@ -335,7 +344,8 @@ class EventExtractor:
         return events
 
     def get_json_response(self, prompt):
-        response = ollama.generate(model='llama3.1:70b', prompt=prompt, options={"temperature": 0}, format='json')
+        # athene-v2:72b
+        response = ollama.generate(model=self.llm_type, prompt=prompt, options={"temperature": 0}, format='json')
         raw_output = response['response'].strip()
         # json_response = re.search(r'\{.*?\}', raw_output)
         json_response = re.search(r'\{(?:[^{}]|(?R))*\}', raw_output, re.DOTALL)
@@ -565,12 +575,12 @@ if __name__ == "__main__":
 
 
     
-    # LLAMA1 = EventExtractor(event_name_model_type='llama3', attribute_model_type='None')
+    # LLAMA1 = EventExtractor(event_name_model_type='llm', attribute_model_type='None')
     
     # LLAMA1.extract_events(texts=mtexts, event_names=mevent_names)
     # print("LLAMA_no_evidence_events:",LLAMA1.event_list)
     from config import event_types, event_description_dict_llm, event_attributes_dict_llm, examples
-    LLAMA2 = EventExtractor(event_name_model_type='llama3', attribute_model_type='None')   
+    LLAMA2 = EventExtractor(event_name_model_type='llm', attribute_model_type='None')   
     LLAMA2.extract_events(texts=mtexts, event_names=mevent_names, 
                                 event_descriptions=event_description_dict_llm,
                                 prompt_evidence={'keywords':DICT.keywords, 

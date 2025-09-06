@@ -4,26 +4,31 @@
 #SBATCH --error=logs/event_llm_%j.err
 #SBATCH --ntasks-per-node=1
 #SBATCH --nodes=1
-#SBATCH --gpus-per-node=1
+#SBATCH --gpus-per-node=2
+#SBATCH --partition=gpu_h100
+#SBATCH --gres=gpu:2
+#SBATCH --cpus-per-task=18
+#SBATCH --mem=512G
 #SBATCH --time=24:00:00
-#SBATCH --partition=gpu_mig
-#SBATCH --reservation=terv92681
-
 
 # -----------------------------
 # Load modules
 # -----------------------------
 module purge
-module load python/3.12.1
-module load cuda/12.1   # only if Ollama + LLM need GPU
+module load 2024
+module load Python/3.12.3-GCCcore-13.3.0
+module load 2025
+module load CUDA/12.8.0   # only if Ollama + LLM need GPU
 
 # -----------------------------
 # Setup Python environment
 # -----------------------------
-if [ ! -d "$SLURM_TMPDIR/venv" ]; then
-    python -m venv $SLURM_TMPDIR/venv
+VENV_DIR="/home/asusaiyah/projects/llm_text_to_event/.venv"
+if [ ! -d "$VENV_DIR" ]; then
+    python -m venv "$VENV_DIR"
 fi
-source $SLURM_TMPDIR/venv/bin/activate
+source "$VENV_DIR/bin/activate"
+
 
 pip install --upgrade pip
 pip install --no-cache-dir -r requirements.txt
@@ -33,12 +38,7 @@ python -m spacy download en_core_web_lg
 # -----------------------------
 # Setup Ollama
 # -----------------------------
-# Install Ollama if not already present
-if ! command -v ollama &> /dev/null; then
-    echo "Installing Ollama..."
-    curl -fsSL https://ollama.com/install.sh | sh
-    export PATH="$HOME/.ollama/bin:$PATH"
-fi
+export PATH="$HOME/.ollama/bin:$PATH"
 
 # Start Ollama service in background
 ollama serve &
@@ -48,7 +48,7 @@ sleep 10
 
 # Pull the model you want (adjust model name if different)
 # Common choices: llama2, mistral, etc.
-ollama pull llama3.1:70b
+# ollama pull llama3.1:70b
 
 # -----------------------------
 # Environment variables

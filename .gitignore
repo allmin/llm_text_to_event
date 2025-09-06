@@ -45,3 +45,4 @@ exports/groundtruth/T-SET-Prelim/Generated/Sleep_132_222.pkl
 exports/groundtruth/T-SET-Prelim/Generated/Sleep_132_222.xlsx
 get-pip.py
 utils/event_extractor_specially_for_sentence.py
+run_llm_snellius.sh
