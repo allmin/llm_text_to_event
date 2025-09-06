@@ -8,8 +8,9 @@ if parent_dir not in sys.path:
 
 import utils.nlp_tools as nlp_tools
 nlp = nlp_tools.TextLib("en_core_web_lg")
-def extract_sentences(text):
-    sentences_raw = nlp.sentence_splitter(text,span=False)
+
+def extract_sentences(document):
+    sentences_raw = nlp.sentence_splitter(document,span=False)
     sentences = [sent['text'] for sent in sentences_raw]
     return sentences 
 
@@ -30,22 +31,22 @@ from config import event_types, event_description_dict_embedder, event_descripti
 suffix = "7_14_days"
 version = 2
 report_counter = 0
-def extract_events(sentences, extractor):
+def extract_events(texts, extractor):
     global report_counter, version, event_types, event_description_dict_embedder
     report_counter+=1
     event_description_dict = event_description_dict_embedder
     if extractor.event_name_model_type == "biolord" and version == 2:
         event_types = [f"{k} : {v}" for (k,v) in event_description_dict.items()]
-    events = extractor.extract_events(sentences=sentences, event_names=event_types, threshold=0.2)
-    assert(len(sentences)==len(events)), f"{len(events)}, {events}, {len(sentences)}, {sentences}"
+    events = extractor.extract_events(texts=texts, event_names=event_types, threshold=0.2)
+    assert(len(texts)==len(events)), f"{len(events)}, {events}, {len(texts)}, {texts}"
     return events
 
 #dictionary denotes keyword matching, biolord denotes embedding similarity
-for model in ["dictionary","biolord"]:
+for model in ["dictionary"]:
     extractor = EventExtractor(event_name_model_type=model, attribute_model_type="None")
     export_folder = f"../exports/selected_reports_with_event_log_only_{model}_v{version}"
     os.makedirs(export_folder,exist_ok=True)
-    batch_size = 5000
+    batch_size = 100000
     notes_selected = pd.read_pickle(f"../exports/filtered_patient_reports_{suffix}.pkl")
     notes_selected["Events"] = ''
     
