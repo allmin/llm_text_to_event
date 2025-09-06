@@ -17,7 +17,6 @@ if parent_dir not in sys.path:
 
 class EventExtractor:
     def __init__(self, is_event_model_type=None, event_name_model_type=None, attribute_model_type=None, dictionary_file=None, llm_type=None):
-    def __init__(self, is_event_model_type=None, event_name_model_type=None, attribute_model_type=None, dictionary_file=None, llm_type=None):
         self.event_name_model_type = event_name_model_type
         self.event_name_known = False
         self.event_detection_time = []
@@ -52,29 +51,6 @@ class EventExtractor:
             # self.llm_type = "llama3.1:70b" --- IGNORE ---
             print(f"Using Ollama model: {self.llm_type}")
         
-        
-        elif event_name_model_type == "llm":
-            try:
-                ollama.info()  # Check if Ollama is installed and accessible
-            except Exception as e:
-                print("Ollama is not installed or not accessible. Please install Ollama from https://ollama.com/docs/installation and ensure it's in your system PATH.")
-                raise e
-            try:
-                models = ollama.models()
-                if len(models) == 0:
-                    print("No Ollama models found. Please download a model, e.g., 'athene-v2:72b' from https://ollama.com/models.")
-                    raise ValueError("No Ollama models found.")
-            except Exception as e:
-                print("Error accessing Ollama models. Please ensure Ollama is properly installed and configured.")
-                raise e
-            
-            if not llm_type:
-                self.llm_type = "llama3.1:70b"  # Default model
-            else:
-                self.llm_type = llm_type
-            
-            # self.llm_type = "llama3.1:70b" --- IGNORE ---
-            print(f"Using Ollama model: {self.llm_type}")
         
         self.is_event_cache = {}
         self.event_name_cache = {}
