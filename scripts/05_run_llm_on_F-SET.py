@@ -26,14 +26,14 @@ def get_col_suffix(keyword_input, example_input):
         col_suffix = "example"
     return col_suffix
 
-
+dataset = "F-SET"
 
 for ET in ['Sleep','Excretion','Eating','Family','Pain']:    
     for attribute_output in [True, False]:
     
         os.makedirs(f"../exports/llm_{llm_type}/{ET}", exist_ok=True)
         try:
-            file = glob(f"../exports/groundtruth/F-SET/Generated/{ET}*.pkl")[0]
+            file = glob(f"../exports/groundtruth/{dataset}/Generated/{ET}*.pkl")[0]
         except:
             print(f"No file found for {ET}")
             continue
@@ -59,6 +59,6 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain']:
                                                                                                    evidence=evidence)
             disagreement_df_temp.loc[:,f"Event_Name_LLM_Events_{col_suffix}_evidence"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence"].apply(lambda x: x['event'])
             disagreement_df_temp.loc[:,f"rAttribute_LLM_Events_{col_suffix}_evidence"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence"].apply(lambda x: x['attribute'])
-            disagreement_df_temp.to_excel(f"../exports/llm_{llm_type}/{ET}/{file_name}_att_{attribute_output}.xlsx", index=False)
-            disagreement_df_temp.to_pickle(f"../exports/llm_{llm_type}/{ET}/{file_name}_att_{attribute_output}.pkl")
+            disagreement_df_temp.to_excel(f"../exports/llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.xlsx", index=False)
+            disagreement_df_temp.to_pickle(f"../exports/llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.pkl")
             
