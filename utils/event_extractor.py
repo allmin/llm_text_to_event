@@ -61,6 +61,7 @@ class EventExtractor:
         self.event_attribute_cache = {}
         self.raw_output_cache = {}
         self.phrases_cache = {}
+        self.positions_cache = {}
     
     
     def lemmatize_keyword(self,keyword):
@@ -103,6 +104,7 @@ class EventExtractor:
         self.similarities_dict = [{}]*len(self.texts)
         self.attributes = [""]*len(self.texts)
         self.keywords = [""]*len(self.texts)
+        self.keyword_positions = [""]*len(self.texts)
         self.phrases = [""]*len(self.texts)
         self.raw_outputs = [""]*len(self.texts)
         self.lemmas = [""]*len(self.texts)
@@ -122,13 +124,13 @@ class EventExtractor:
         self.extract_attributes()
         if len(self.event_detection_time) == 0:
             self.event_detection_time = [""]*len(self.texts)
-        assert len(self.texts) == len(self.predicted_events) == len(self.similarities_dict) == len(self.keywords) == len(self.attributes) == len(self.phrases) == len(self.lemmas) == len(self.attribute_dict_list) == len(self.event_name_prompt_list) == len(self.raw_outputs) == len(self.event_detection_time), \
-            f"{len(self.texts)}, {len(self.predicted_events)}, {len(self.similarities_dict)}, {len(self.keywords)}, {len(self.attributes)}, {len(self.phrases)}, {len(self.lemmas)}, {len(self.attribute_dict_list)}, {len(self.event_name_prompt_list)} ,{len(self.raw_outputs)} ,{len(self.event_detection_time)}"
-        for text, event, similarity_dict, keyword, attribute, phrase, lemma, attribute_dict, prompt, raw_output, time in zip(self.texts, self.predicted_events, self.similarities_dict, self.keywords, self.attributes, self.phrases, self.lemmas, self.attribute_dict_list, self.event_name_prompt_list , self.raw_outputs, self.event_detection_time):
+        assert len(self.texts) == len(self.predicted_events) == len(self.similarities_dict) == len(self.keywords) == len(self.keyword_positions) == len(self.attributes) == len(self.phrases) == len(self.lemmas) == len(self.attribute_dict_list) == len(self.event_name_prompt_list) == len(self.raw_outputs) == len(self.event_detection_time), \
+            f"{len(self.texts)}, {len(self.predicted_events)}, {len(self.similarities_dict)}, {len(self.keywords)}, {len(self.keyword_positions)}, {len(self.attributes)}, {len(self.phrases)}, {len(self.lemmas)}, {len(self.attribute_dict_list)}, {len(self.event_name_prompt_list)} ,{len(self.raw_outputs)} ,{len(self.event_detection_time)}"
+        for text, event, similarity_dict, keyword, keyword_position, attribute, phrase, lemma, attribute_dict, prompt, raw_output, time in zip(self.texts, self.predicted_events, self.similarities_dict, self.keywords, self.keyword_positions, self.attributes, self.phrases, self.lemmas, self.attribute_dict_list, self.event_name_prompt_list , self.raw_outputs, self.event_detection_time):
             if self.event_name_model_type == "biolord":
                 self.event_list.append({"text":text, "event":event, "similarity":similarity_dict, "attributes": attribute_dict, "event_detection_time":time})
             elif self.event_name_model_type == "dictionary":
-                self.event_list.append({"text":text, "event":event, "keyword":keyword, "lemma":lemma, "attributes": attribute_dict, "event_detection_time":time})
+                self.event_list.append({"text":text, "event":event, "keyword":keyword, "keyword_position":keyword_position, "lemma":lemma, "attributes": attribute_dict, "event_detection_time":time})
             elif self.event_name_model_type == "llm":
                 self.event_list.append({"text":text, "event":event, "attribute":attribute, "phrase":phrase, "raw_output":raw_output,"attributes": attribute_dict, "event_name_prompt":prompt, "event_detection_time":time})
             else:
@@ -237,36 +239,54 @@ class EventExtractor:
         self.event_detection_time = []
         self.keywords = []
         self.lemmas = []
+        self.keyword_positions = []
         for ind,text in enumerate(self.texts):
             start_time = time.perf_counter()
             text_events = []
             text_keywords = []
             text_lemmas = []
+            text_positions = []
             if text in self.event_name_cache:
                 self.predicted_events.append(self.event_name_cache[text])
                 self.keywords.append(self.keywords_cache[text])
                 self.lemmas.append(self.lemmas_cache[text])
+                self.keyword_positions.append(self.positions_cache[text])
             else:
                 for index,(keyword, event_name_lemma_dict) in enumerate(self.dictionary.items()):
                     keyword_w_space = keyword.replace('_', ' ')
-                    if re.search(rf'\b{re.escape(keyword_w_space)}\b', text, re.IGNORECASE):
-                        num_of_occurrence = len(re.findall(rf'\b{re.escape(keyword_w_space)}\b', text, re.IGNORECASE))
+                    matches = list(re.finditer(rf'\b{re.escape(keyword_w_space)}\b', text, re.IGNORECASE))
+                    if matches:
                         event_name = event_name_lemma_dict['event_type']
                         lemma = event_name_lemma_dict['lemma']
-                        for i in range(num_of_occurrence):
+                        for m in matches:
                             text_events.append(event_name)
                             text_keywords.append(keyword_w_space)
                             text_lemmas.append(lemma)
+                            text_positions.append(f"{m.span()[0]}_{m.span()[1]}")  # (start, end)
+                            
+                            
+                            
+                    # if re.search(rf'\b{re.escape(keyword_w_space)}\b', text, re.IGNORECASE):
+                    #     num_of_occurrence = len(re.findall(rf'\b{re.escape(keyword_w_space)}\b', text, re.IGNORECASE))
+                    #     event_name = event_name_lemma_dict['event_type']
+                    #     lemma = event_name_lemma_dict['lemma']
+                    #     for i in range(num_of_occurrence):
+                    #         text_events.append(event_name)
+                    #         text_keywords.append(keyword_w_space)
+                    #         text_lemmas.append(lemma)
                 if len(text_events)==0 and index==len(self.dictionary)-1:
                     text_events = ["Unknown"]
                     text_keywords = [""]
                     text_lemmas = [""]
+                    text_positions = [""] 
                 self.predicted_events.append(text_events)
                 self.keywords.append(text_keywords)
                 self.lemmas.append(text_lemmas)
+                self.keyword_positions.append(text_positions)
                 self.event_name_cache[text] = text_events
                 self.keywords_cache[text] = text_keywords
                 self.lemmas_cache[text] = text_lemmas
+                self.positions_cache[text] = text_positions
             end_time = time.perf_counter()  # End timing
             elapsed_time = end_time - start_time
             self.event_detection_time.append(elapsed_time)
@@ -546,7 +566,8 @@ if __name__ == "__main__":
                   "labile bp, apnea ventilation when asleep even when off sedation, vent mode changed to mmv by rt",
                   "patient restless and agitated @ times, pulling cpap off, more cooperative when medicated, short periods of apnea noted when off cpap, will attempt to keep patient on cpap when asleep",
                   "asleep ft on aggressive pulm toilet done cpt with effect bs controlled with insulin drops and prn boluses [**md number(3) **] output great lasix tid cont to monitor cr and renal fx"]
-    mtexts = ["""had difficulty falling asleep but refused serax. became disoriented from 3:00-5:00, knew he was still in hospital but asked about, "the dog in the room."""]
+    mtexts = ["""had difficulty falling asleep but refused serax. is sleeping. became disoriented from 3:00-5:00, knew he was still in hospital but asked about, "the dog in the room."""]
+    
 #     mtexts = ['bp lower when asleep',
 #  'sleeping in naps',
 #  'slept well',
