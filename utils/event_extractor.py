@@ -103,6 +103,7 @@ class EventExtractor:
         self.attribute_description_dict = attribute_description_dict
         self.similarities_dict = [{}]*len(self.texts)
         self.attributes = [""]*len(self.texts)
+        self.attribute_dict_list = [""]*len(self.texts)
         self.keywords = [""]*len(self.texts)
         self.keyword_positions = [""]*len(self.texts)
         self.phrases = [""]*len(self.texts)
@@ -121,7 +122,8 @@ class EventExtractor:
         self.prompt_evidence = prompt_evidence
         self.extract_is_event()
         self.extract_event_names()
-        self.extract_attributes()
+        if self.attribute_model_type:
+            self.extract_attributes()
         if len(self.event_detection_time) == 0:
             self.event_detection_time = [""]*len(self.texts)
         assert len(self.texts) == len(self.predicted_events) == len(self.similarities_dict) == len(self.keywords) == len(self.keyword_positions) == len(self.attributes) == len(self.phrases) == len(self.lemmas) == len(self.attribute_dict_list) == len(self.event_name_prompt_list) == len(self.raw_outputs) == len(self.event_detection_time), \
@@ -132,7 +134,7 @@ class EventExtractor:
             elif self.event_name_model_type == "dictionary":
                 self.event_list.append({"text":text, "event":event, "keyword":keyword, "keyword_position":keyword_position, "lemma":lemma, "attributes": attribute_dict, "event_detection_time":time})
             elif self.event_name_model_type == "llm":
-                self.event_list.append({"text":text, "event":event, "attribute":attribute, "phrase":phrase, "raw_output":raw_output,"attributes": attribute_dict, "event_name_prompt":prompt, "event_detection_time":time})
+                self.event_list.append({"text":text, "event":event, "phrase":phrase, "raw_output":raw_output, "attributes": attribute, "event_name_prompt":prompt, "event_detection_time":time})
             else:
                 self.event_list.append({"text":text, "event":event, "attributes": attribute_dict, "event_detection_time":time})
         return self.event_list
@@ -241,12 +243,14 @@ class EventExtractor:
         self.lemmas = []
         self.keyword_positions = []
         for ind,text in enumerate(self.texts):
+            used_cache = False
             start_time = time.perf_counter()
             text_events = []
             text_keywords = []
             text_lemmas = []
             text_positions = []
             if text in self.event_name_cache:
+                used_cache = True
                 self.predicted_events.append(self.event_name_cache[text])
                 self.keywords.append(self.keywords_cache[text])
                 self.lemmas.append(self.lemmas_cache[text])
@@ -289,7 +293,11 @@ class EventExtractor:
                 self.positions_cache[text] = text_positions
             end_time = time.perf_counter()  # End timing
             elapsed_time = end_time - start_time
-            self.event_detection_time.append(elapsed_time)
+            if used_cache:
+                #append nan
+                self.event_detection_time.append(np.nan)
+            else:
+                self.event_detection_time.append(elapsed_time)
         self.event_name_known = True
             
     def extract_attributes(self):
@@ -458,6 +466,7 @@ class EventExtractor:
         self.raw_outputs = []
         self.attributes = []
         for ind, text in tqdm(enumerate(self.texts)):
+            used_cache = False
             start_time = time.perf_counter()
             if self.event_descriptions:
                 event_w_description = self.event_descriptions
@@ -519,9 +528,9 @@ class EventExtractor:
                         {examples}
                         """
             if text in self.event_name_cache:
+                used_cache = True
                 self.predicted_events.append(self.event_name_cache[text])
                 self.attributes.append(self.attributes_cache[text])
-                self.phrases.append(self.phrases_cache[text])
                 self.raw_outputs.append(self.raw_output_cache[text])
             else:                
                 json_response, raw_output = self.get_json_response(prompt)
@@ -533,6 +542,7 @@ class EventExtractor:
                         for event_inst in event['events']:
                             event_name.append(event_inst.get("event_type","Unknown"))
                             attributes.append({event_inst.get("event_type","Unknown"):event_inst.get("attributes",{})})
+                        # print("raw_output:",event,"attributes:", attributes)
                     except json.JSONDecodeError:
                         pass
                 self.predicted_events.append(event_name)
@@ -544,7 +554,11 @@ class EventExtractor:
             self.event_name_prompt_list.append(prompt)
             end_time = time.perf_counter()
             elapsed_time = end_time - start_time
-            self.event_detection_time.append(elapsed_time)
+            if used_cache:
+                #append nan
+                self.event_detection_time.append(np.nan)
+            else:
+                self.event_detection_time.append(elapsed_time)
         self.event_name_known = True
     
    
@@ -566,8 +580,8 @@ if __name__ == "__main__":
                   "labile bp, apnea ventilation when asleep even when off sedation, vent mode changed to mmv by rt",
                   "patient restless and agitated @ times, pulling cpap off, more cooperative when medicated, short periods of apnea noted when off cpap, will attempt to keep patient on cpap when asleep",
                   "asleep ft on aggressive pulm toilet done cpt with effect bs controlled with insulin drops and prn boluses [**md number(3) **] output great lasix tid cont to monitor cr and renal fx"]
-    mtexts = ["""had difficulty falling asleep but refused serax. is sleeping. became disoriented from 3:00-5:00, knew he was still in hospital but asked about, "the dog in the room."""]
-    
+    mtexts = ["""had difficulty falling asleep but refused serax. slept very well. became disoriented from 3:00-5:00, knew he was still in hospital but asked about, "the dog in the room."""]
+    mtexts = ["""CCU NSG ADMIT NOTE.\n19 year old FEMALE ADMITTED TO CCU status post VF ARREST.\n\nPMH:NOT SIGNIFICANT.\n\nALLERGIES:NKDA.\n\nMEDS:MULTIPLE OVER THE COUNTER DIET SUPRESSENTS.\n\nhistory:?VIRAL SYNDROME APPROX 2 WEEKS AGO. TAKING DIET SURPRESSENTS- ?ONSET OF USE (PER FAMILY PLANNING [**State 2968**] VACATION OVER HOLIDAY-?ING ONSET OF DIET SURPRESSENTS). [**1-8**] AM ONSET ACUTE DYSPNEA W PROGRESSION TO CARDIAC ARREST-VF. INTUBATED & DEFIB TO ST IN FIELD-TRANSPORTED TO [**Hospital1 2**]. AGGRESSIVELY RXED IN EW. CT HEAD/CHEST-NEG FOR INTRACRANIAL HEMORRHAGE & PE. FEBRILE-PAN CULTURED & ABX STARTED. PROGRESSIVELY DETERIORATED- REQUIRING PRESSORS & APPROX 4L FL-TO CARD CATH LAD-CLEAN C'S, BUT ELEVATED FILLING PRESSURES-W 30'S-RX W LASIX & ADMITTED TO CCU FOR FURTHER MANAGEMENT.\n   ECHO=SEVER GLOBAL LV HK. LV FUNCTION SEVERLY DEPRESSED. RV FUNCTION DEPRESSED. 1+MR.\n\nSOCIAL:BU STUDENT-2ND YEAR. FROM ILL. PARENTS CONTACT[**Name (NI) **] & BOTH PRESENT. HAS 2 OTHER SIBLINGS IN ILL. NON SMOKER & ?LIMITED DRINKER.\n\n\n"""]
 #     mtexts = ['bp lower when asleep',
 #  'sleeping in naps',
 #  'slept well',
@@ -601,8 +615,8 @@ if __name__ == "__main__":
     
     # LLAMA1.extract_events(texts=mtexts, event_names=mevent_names)
     # print("LLAMA_no_evidence_events:",LLAMA1.event_list)
-    from config import event_types, event_description_dict_llm, event_attributes_dict_llm, examples
-    LLAMA2 = EventExtractor(event_name_model_type='llm', attribute_model_type='None')   
+    from config import event_description_dict_llm, event_attributes_dict_llm, examples
+    LLAMA2 = EventExtractor(event_name_model_type='llm', attribute_model_type='None',llm_type = "llama3.1:70b")   
     LLAMA2.extract_events(texts=mtexts, event_names=mevent_names, 
                                 event_descriptions=event_description_dict_llm,
                                 prompt_evidence={'keywords':DICT.keywords, 
@@ -612,7 +626,7 @@ if __name__ == "__main__":
                                 attribute_description_dict=event_attributes_dict_llm,
                                 attribute_output=True, 
                                 keyword_input=True, example_input=True,)
-    print("LLAMA_all_evidence_events:",LLAMA2.event_list["raw_output"])
+    print("LLAMA_all_evidence_events:",LLAMA2.event_list[0]["attributes"])
     # sudo kill -9 $(nvidia-smi | awk 'NR>8 {print $5}' | grep -E '^[0-9]+$')
     
 

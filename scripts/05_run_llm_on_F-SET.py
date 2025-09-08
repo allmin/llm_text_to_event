@@ -30,15 +30,14 @@ dataset = "F-SET"
 
 for ET in ['Sleep','Excretion','Eating','Family','Pain']:    
     for attribute_output in [True, False]:
-    
-        os.makedirs(f"../exports/llm_{llm_type}/{ET}", exist_ok=True)
+        os.makedirs(f"../exports/llm_{llm_type}_{dataset}/{ET}", exist_ok=True)
         try:
             file = glob(f"../exports/groundtruth/{dataset}/Generated/{ET}*.pkl")[0]
         except:
             print(f"No file found for {ET}")
             continue
         file_name = os.path.basename(file).strip(".pkl")
-        df = pd.read_pickle(file)
+        df = pd.read_pickle(file).iloc[:1]
         df.Similarity = df.Similarity.astype(str)
         df_grouped = df.groupby(['Sentence_dictionary'])[["UID","Event_Name_dictionary","Keyword","Similarity"]].agg(lambda x: tuple(set(x)) if len(set(x))>1 else set(x).pop()).reset_index()
         df_grouped.Similarity = df_grouped.Similarity.apply(eval)     
@@ -58,7 +57,7 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain']:
                                                                                                    attribute_output=attribute_output,
                                                                                                    evidence=evidence)
             disagreement_df_temp.loc[:,f"Event_Name_LLM_Events_{col_suffix}_evidence"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence"].apply(lambda x: x['event'])
-            disagreement_df_temp.loc[:,f"rAttribute_LLM_Events_{col_suffix}_evidence"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence"].apply(lambda x: x['attribute'])
+            disagreement_df_temp.loc[:,f"Attribute_LLM_Events_{col_suffix}_evidence"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence"].apply(lambda x: x['attribute'])
             disagreement_df_temp.to_excel(f"../exports/llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.xlsx", index=False)
             disagreement_df_temp.to_pickle(f"../exports/llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.pkl")
             

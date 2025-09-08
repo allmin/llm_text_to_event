@@ -4,9 +4,8 @@
 #SBATCH --error=logs/event_llm_%j.err
 #SBATCH --ntasks-per-node=1
 #SBATCH --nodes=1
-#SBATCH --gpus-per-node=2
+#SBATCH --gpus-per-node=3
 #SBATCH --partition=gpu_h100
-#SBATCH --gres=gpu:2
 #SBATCH --cpus-per-task=18
 #SBATCH --mem=512G
 #SBATCH --time=24:00:00
@@ -64,3 +63,7 @@ export $(grep -v '^#' .env | xargs)
 # -----------------------------
 cd scripts
 python 05_run_llm_on_F-SET.py
+# python event_extractor.py
+# sbatch --mail-type=ALL --mail-user=a.p.s.susaiyah@tue.nl run_llm_snellius.sh
+# srun --partition=gpu_a100 --gres=gpu:1 --cpus-per-task=18 --mem=100G --time=8:00:00 --pty bash -i
+# srun --partition=gpu_a100 --gres=gpu:1 --cpus-per-task=18 --mem=100G --time=8:00:00 jupyter lab --no-browser --port=8888
