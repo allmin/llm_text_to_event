@@ -32,12 +32,12 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain']:
     for attribute_output in [True, False]:
         os.makedirs(f"../exports/llm_{llm_type}_{dataset}/{ET}", exist_ok=True)
         try:
-            file = glob(f"../exports/groundtruth/{dataset}/Generated/{ET}*.pkl")[0]
+            file = glob(f"../exports/04_groundtruth/{dataset}/Generated/{ET}*.pkl")[0]
         except:
             print(f"No file found for {ET}")
             continue
         file_name = os.path.basename(file).strip(".pkl")
-        df = pd.read_pickle(file).iloc[:1]
+        df = pd.read_pickle(file)
         df.Similarity = df.Similarity.astype(str)
         df_grouped = df.groupby(['Sentence_dictionary'])[["UID","Event_Name_dictionary","Keyword","Similarity"]].agg(lambda x: tuple(set(x)) if len(set(x))>1 else set(x).pop()).reset_index()
         df_grouped.Similarity = df_grouped.Similarity.apply(eval)     

@@ -9,15 +9,15 @@ parent_dir = os.path.abspath(os.path.join(os.getcwd(), '..'))
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 from utils.event_extractor import EventExtractor
-from config import event_types, event_description_dict_llm, llm_type, event_attributes_dict_llm, examples
+from config import event_types, event_description_dict_llm, llm_type, event_attributes_dict_llm, examples, examples_Ao
 
 def extract_events_funct(texts, extractor=None, evidence={'keywords':[],'event_names':[],'similarities':[]}, keyword_input=None, example_input=None, attribute_output=None):
-    global event_description_dict_llm, event_types, event_attributes_dict_llm, examples
+    global event_description_dict_llm, event_types, event_attributes_dict_llm, examples, examples_Ao
     events = extractor.extract_events(texts=texts, 
                                       event_names=event_types, 
                                       event_descriptions=event_description_dict_llm, 
                                       prompt_evidence=evidence, 
-                                      examples=examples,
+                                      examples=examples_Ao if attribute_output else examples,
                                       attribute_description_dict=event_attributes_dict_llm,
                                       attribute_output=attribute_output,
                                       keyword_input=keyword_input, 
@@ -50,12 +50,12 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
     for attribute_output in [True, False]:
         os.makedirs(f"../exports/llm_{llm_type}_{dataset}/{ET}", exist_ok=True)
         try:
-            file = glob(f"../exports/groundtruth/{dataset}/Generated/{ET}*.pkl")[0]
+            file = glob(f"../exports/04_groundtruth/{dataset}/Generated/{ET}*.pkl")[0]
         except:
             print(f"No file found for {ET}")
             continue
         file_name = os.path.basename(file).strip(".pkl")
-        df = pd.read_pickle(file)
+        df = pd.read_pickle(file).iloc[:300]
         df['Event_Name'] = [tuple(i) for i in df['Event_Name']]
         df['Keyword'] = [tuple(i) for i in df['Keyword']]
         # df.Similarity = df.Similarity.astype(str)

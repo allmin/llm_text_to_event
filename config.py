@@ -16,110 +16,241 @@ event_description_dict_llm = {
 
 event_description_dict_embedder = event_description_dict_llm
 
+common_attributes = {"negation": "<boolean> # true if the event is negated, false otherwise",
+                     "time": "<string> # e.g., 2 am, 5 pm, night, after shower, etc.",
+                     "caused_by": "<string> # e.g., medication, treatment, etc.",
+                     }
+
 event_attributes_dict_llm = {
                                 "Eating": {
-                                    "food": "<string>",
-                                    "amount": "<string>",
-                                    "method": "<string>  # e.g., oral, tube"
+                                    "food": "<string> # e.g., pancakes, porridge, etc.",
+                                    "amount": "<string> # e.g., 1, 2 bowls, etc.",
+                                    "method": "<string>  # e.g., oral, tube, etc."
                                 },
                                 "Excretion": {
-                                    "type": "<string> # e.g., urine, stool",
-                                    "frequency": "<string>",
-                                    "quality": "<string> # e.g., loose, hard"
+                                    "type": "<string> # e.g., urine, stool, etc.",
+                                    "frequency": "<string> # e.g., 2x, once, etc.",
+                                    "quality": "<string> # e.g., loose, hard, etc."
                                 },
                                 "Family": {
-                                    "interaction": "<string> # e.g., visit, call, communication",  
-                                    "relation": "<string> # e.g., mother, son"
+                                    "interaction": "<string> # e.g., visit, call, communication, etc.",  
+                                    "relation": "<string> # e.g., mother, son, etc."
                                 },
                                 "Pain": {
-                                    "severity": "<string> # e.g., mild, moderate, severe, numeric scale if present",
-                                    "location": "<string>",
-                                    "duration": "<string>"
+                                    "severity": "<string> # e.g., mild, moderate, severe, numeric scale if present, etc.",
+                                    "location": "<string> # e.g., right knee, head, etc.",
+                                    "duration": "<string> # e.g., all night, 3 hours, etc.",
                                 },
                                 "Sleep": {
-                                    "quality": "<string> # e.g., good, poor, restless",   
-                                    "duration": "<string> # e.g., hours, phrases like \"all night\""   
+                                    "quality": "<string> # e.g., good, poor, restless, etc.",   
+                                    "duration": "<string> # e.g., 6 hours, phrases like \"all night\", etc."   
                                 }
                             }
 
-examples = """
+for et in event_types:
+    event_attributes_dict_llm[et].update(common_attributes)
+
+
+
+examples_Ao = """
                 ---
                 Examples:
                 
-                sentence: "Patient ate breakfast this morning."
+                text: "Patient ate breakfast this morning. He seems less anxious."
                 output: {
                 "events": [
                     {
                     "event_type": "Eating",
-                    "attributes": {"food": "breakfast"}
+                    "text_quote":"Patient ate breakfast this morning"
                     }
                 ]
                 }
                 
-                sentence: "Patient reported severe abdominal pain."
+                text: "Patient reported severe abdominal pain."
                 output: {
                 "events": [
                     {
                     "event_type": "Pain",
-                    "attributes": {"severity": "severe", "location": "abdominal"}
+                    "text_quote": "severe abdominal Pain"
                     }
                 ]
                 }
                 
-                sentence: "Patient called his son."
+                text: "Patient called his son around 3 pm."
                 output: {
                 "events": [
                     {
                     "event_type": "Family",
-                    "attributes": {"interaction": "call", "relation": "son"}
+                    "text_quote": "called his son around 3 pm"
                     }
                 ]
                 }
                 
-                sentence: "Patient had a loose stool overnight."
+                text: "Patient had a loose stool overnight."
                 output: {
                 "events": [
                     {
                     "event_type": "Excretion",
-                    "attributes": {"type": "stool", "quality": "loose"}
+                    "text_quote": "loose stool overnight"
                     }
                 ]
                 }
                 
-                sentence: "Patient was able to sleep well last night."
+                text: "Patient was able to sleep well last night."
                 output: {
                 "events": [
                     {
                     "event_type": "Sleep",
-                    "attributes": {"quality": "well"}
+                    "text_quote": "sleep well last night"
                     }
                 ]
                 }
                 
-                sentence: "The patient couldn\'t sleep due to severe pain."
+                text: "The patient couldn\'t sleep due to severe pain."
+                output: {
+                "events": [
+                    {
+                    "event_type": "Pain",
+                    "text_quote": "severe pain"
+                    }
+                ]
+                }
+                
+                text: "The patient complained of severe back pain, was given Tylenol, but the pain persisted and he was then prescribed stronger morphine."
+                output: {
+                "events": [
+                    {
+                    "event_type": "Pain",
+                    "text_quote": "complained of severe back pain"
+                    },
+                    {
+                    "event_type": "Pain",
+                    "text_quote": "pain persisted"
+                    }
+                ]
+                }
+                """
+
+examples_Ao = """
+                ---
+                Examples:
+                
+                text: "Patient ate breakfast this morning. He seems less anxious."
+                output: {
+                "events": [
+                    {
+                    "event_type": "Eating",
+                    "text_quote":"Patient ate breakfast this morning",
+                    "attributes": {"food": "breakfast", 
+                                   "amount": "Unknown",
+                                   "method": "Unknown",
+                                   "time":"morning",
+                                   "caused_by":"Unknown"}
+                    }
+                ]
+                }
+                
+                text: "Patient reported severe abdominal pain."
+                output: {
+                "events": [
+                    {
+                    "event_type": "Pain",
+                    "text_quote": "severe abdominal Pain",
+                    "attributes": {"severity": "severe", 
+                                   "location": "abdominal",
+                                   "duration": "Unknown",
+                                   "time":"Unknown",
+                                   "caused_by":"Unknown"}
+                    }
+                ]
+                }
+                
+                text: "Patient called his son around 3 pm."
+                output: {
+                "events": [
+                    {
+                    "event_type": "Family",
+                    "text_quote": "called his son around 3 pm",
+                    "attributes": {"interaction": "call", 
+                                    "relation": "son",
+                                    "time":"3 pm",
+                                    "caused_by":"Unknown"}
+                    }
+                ]
+                }
+                
+                text: "Patient had a loose stool overnight."
+                output: {
+                "events": [
+                    {
+                    "event_type": "Excretion",
+                    "text_quote": "loose stool overnight",
+                    "attributes": {"type": "stool", 
+                                   "quality": "loose", 
+                                   "frequency":"overnight", 
+                                   "time":"night",
+                                   "caused_by":"Unknown"}
+                    }
+                ]
+                }
+                
+                text: "Patient was able to sleep well last night."
                 output: {
                 "events": [
                     {
                     "event_type": "Sleep",
-                    "attributes": {"quality": "poor"}
-                    },
-                    {
-                    "event_type": "Pain",
-                    "attributes": {"severity": "severe"}
+                    "text_quote": "sleep well last night",
+                    "attributes": {"quality": "well",
+                                    "duration": "Unknown", 
+                                    "time":"night",
+                                    "caused_by":"Unknown"}
                     }
                 ]
                 }
                 
-                sentence: "The patient complained of severe back pain, was given Tylenol, but the pain persisted and he was then prescribed stronger morphine."
+                text: "The patient couldn\'t sleep due to severe pain."
+                output: {
+                "events": [
+                    {
+                    "event_type": "Sleep",
+                    "text_quote": "couldn\'t sleep",
+                    "attributes": {"quality": "poor", 
+                                    "duration": "Unknown",
+                                   "time":"Unknown",
+                                   "caused_by":"Pain"}
+                    },
+                    {
+                    "event_type": "Pain",
+                    "text_quote": "severe pain",
+                    "attributes": {"severity": "severe", 
+                                    "location": "Unknown", 
+                                    "duration": "Unknown", 
+                                   "time":"before Sleep",
+                                   "caused_by":"Unknown"}
+                    }
+                ]
+                }
+                
+                text: "The patient complained of severe back pain, was given Tylenol, but the pain persisted and he was then prescribed stronger morphine."
                 output: {
                 "events": [
                     {
                     "event_type": "Pain",
-                    "attributes": {"severity": "severe", "location": "back"}
+                    "text_quote": "complained of severe back pain",
+                    "attributes": {"severity": "severe", 
+                                    "location": "back",
+                                    "duration": "Unknown", 
+                                    "time":"Unknown",
+                                    "caused_by":"Unknown"}
                     },
                     {
                     "event_type": "Pain",
-                    "attributes": {"duration": "persistent"}
+                    "text_quote": "pain persisted",
+                    "attributes": {"severity": "severe", 
+                                   "location": "back",
+                                   "duration": "persistent", 
+                                   "time":"after Tylenol",
+                                   "caused_by":"Unknown"}
                     }
                 ]
                 }
