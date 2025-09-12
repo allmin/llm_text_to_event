@@ -52,7 +52,7 @@ for et in event_types:
 
 
 
-examples_Ao = """
+examples = """
                 ---
                 Examples:
                 

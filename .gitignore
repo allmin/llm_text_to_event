@@ -49,3 +49,4 @@ run_llm_snellius.sh
 sucessful-logs/*
 .env
 run_llm_snellius.sh
+.env
