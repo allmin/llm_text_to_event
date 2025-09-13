@@ -1,6 +1,6 @@
 # CUDA_VISIBLE_DEVICES=0 python 05_run_llm_on_P-SET.py --attribute_output True
 # CUDA_VISIBLE_DEVICES=1 python 05_run_llm_on_P-SET.py --attribute_output False
-# python 05_run_llm_on_P-SET.py --attribute_output All
+# python -i 05_run_llm_on_P-SET.py --attribute_output All
 # sudo kill -9 $(nvidia-smi | awk 'NR>8 {print $5}' | grep -E '^[0-9]+$')
 import pandas as pd
 import os, sys
@@ -85,16 +85,16 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
             df = pd.read_pickle(file)
             df['Event_Name'] = [tuple(i) for i in df['Event_Name']]
             df['Keyword'] = [tuple(i) for i in df['Keyword']]
-            
-        
             if analysis_type == 'Sent':
-                disagreement_df_temp = df.copy()
+                kwp = df[df.is_keyword_present].iloc[:300]
+                kwnp = df[df.is_keyword_present==False].sample(len(kwp)//2, random_state=42)
+                disagreement_df_temp = pd.concat([kwp,kwnp]).reset_index(drop=True)
                 input_to_analyse = disagreement_df_temp.Sentence.tolist()
             elif analysis_type == 'Doc':
-                disagreement_df_temp = df.groupby('UID')[["Event_Name","Keyword","Document"]].agg(lambda x:combine_lists(x)).reset_index()
+                disagreement_df_temp = df.groupby('ROW_ID')[["Event_Name","Keyword","Document"]].agg(lambda x:combine_lists(x)).reset_index()
                 disagreement_df_temp['Document'] = [i[0] for i in disagreement_df_temp['Document']]
                 input_to_analyse = disagreement_df_temp.Document.tolist()
-            disagreement_df_temp = disagreement_df_temp.copy().iloc[:300]
+            # disagreement_df_temp = disagreement_df_temp.copy().iloc[:300]
             print(ET,len(disagreement_df_temp), datetime.now().strftime("%Y-%m-%d %H:%M:%S"), file_name)
             print(f'attribute_output:{attribute_output}, Time Start: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
             evidence={'keywords':disagreement_df_temp.Keyword.tolist(), 'event_names':disagreement_df_temp.Event_Name.tolist(), }
