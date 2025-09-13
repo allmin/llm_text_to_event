@@ -1,4 +1,5 @@
-# streamlit run annotate.py
+# streamlit run annotate.py --server.port 8501
+# fuser -k 8501/tcp || true; streamlit run annotate.py --server.port 8501
 #srun --pty -p gpu_mig -t 01-00:00:00 -N 1 -n 1 --mem=8G streamlit run annotate.py --server.port 8501 --server.address 0.0.0.0
 # srun --pty -p gpu_a100 -t 01-00:00:00 -N 1 -n 1 --gpus-per-node 1 --mem=8G bash
 # ssh -L 8501:localhost:8501 gcn17
@@ -8,7 +9,7 @@ import pandas as pd
 import re
 import os
 from glob import glob
-all_paths = glob("../exports/groundtruth/**/**")
+all_paths = glob("../exports/04_groundtruth/**/**")
 only_folders = [p for p in all_paths if os.path.isdir(p)]
 only_folders = [p for p in only_folders if "Annotating" in p]
 
@@ -20,15 +21,19 @@ FILE_PATH = st.selectbox("Select Pickle File", pickle_files)
 if ("FILE_PATH" not in st.session_state) or st.session_state['FILE_PATH'] != FILE_PATH:
     st.session_state["FILE_PATH"] = FILE_PATH
     st.session_state.ET = os.path.splitext(os.path.basename(FILE_PATH))[0].split("_")[0]
+    st.session_state.focus = "Doc" if "Document" in FILE_PATH else "Sent"
     st.write(st.session_state.ET)
  
 ET = st.session_state.ET   
+focus = st.session_state.focus  # DOCUMENT or Sentence
 
 @st.cache_data(show_spinner=False)
 def load_data(path):
     df = pd.read_pickle(path)
-    if f"gt_{ET}" not in df.columns:
-        df[f"gt_{ET}"] = None
+    if f"{focus}_gt_{ET}" not in df.columns:
+        df[f"{focus}_gt_{ET}"] = None
+    if "negation" not in df.columns:
+        df["negation"] = False
     if "good_example" not in df.columns:
         df["good_example"] = False
     df.index = range(len(df))
@@ -38,8 +43,26 @@ def load_data(path):
 def save_data(df):
     global FILE_PATH
     df.to_pickle(FILE_PATH)
+    
+def get_last_continuous_sequence(numbers):
+    if not numbers:
+        return []
 
-st.title(f"🛌 {ET} Ground Truth Correction Tool")
+    sequences = []
+    current_seq = [numbers[0]]
+
+    for i in range(1, len(numbers)):
+        if numbers[i] == numbers[i - 1] + 1:
+            current_seq.append(numbers[i])
+        else:
+            sequences.append(current_seq)
+            current_seq = [numbers[i]]
+
+    sequences.append(current_seq)  # append the last sequence
+
+    return sequences
+
+st.title(f"🛌 {focus}: {ET} Ground Truth Correction Tool")
 
 df = load_data(st.session_state.FILE_PATH)
 
@@ -64,8 +87,13 @@ if page_selection != page:
 
 
 #find rows where gt_ET is None and find the first row index
-if st.button("Go to first unlabelled row"):
-    none_rows = df[df[f"gt_{ET}"].isnull()]
+if st.button("Show unlabelled row ids"):
+    none_rows = df[df[f"{focus}_gt_{ET}"].isnull()]
+    none_rows_index = none_rows.index.tolist()
+    none_rows_index = [i for i in none_rows_index if i > (page*10)]
+    none_rows = df.loc[none_rows_index]
+    
+    
     if not none_rows.empty:
         first_none_index = none_rows.index[0]
         if first_none_index < start_idx or first_none_index >= end_idx:
@@ -80,10 +108,14 @@ for i, row in subset.iterrows():
 
     # Highlight keyword in sentence
     pattern = re.escape(str(row["Keyword"]))
-    highlighted = re.sub(pattern, f"**:orange[{row['Keyword']}]**", str(row["Sentence"]), flags=re.IGNORECASE)
+    if focus == "Doc":
+        text_to_highlight = str(row["Document"])
+    else:
+        text_to_highlight = str(row["Sentence"])
+    highlighted = re.sub(pattern, f"**:orange[{row['Keyword']}]**", text_to_highlight, flags=re.IGNORECASE)
     st.markdown(highlighted, unsafe_allow_html=True)
 
-    current_val = row[f"gt_{ET}"]
+    current_val = row[f"{focus}_gt_{ET}"]
     options = {
         "Yes": True,
         "No": False,
@@ -106,16 +138,33 @@ for i, row in subset.iterrows():
     new_value = options[new_label]
 
     if new_value != current_val:
-        df.at[i, f"gt_{ET}"] = new_value
+        df.at[i, f"{focus}_gt_{ET}"] = new_value
+        if focus == "Doc":
+            df.loc[df['Document'] == row['Document'], f"{focus}_gt_{ET}"] = new_value
+        else:
+            df.loc[df['Sentence'] == row['Sentence'], f"{focus}_gt_{ET}"] = new_value
         save_data(df)
         st.cache_data.clear()
+        st.rerun()
     
     
     current_good_example = df.loc[i, "good_example"]
-   
-    new_good_example = st.checkbox("Good Example For Paper", value=current_good_example, key=f"good_example_{page}_{i}")
+    current_negation = df.loc[i, "negation"]
+    
+    col1, col2 = st.columns(2)
+    with col2:
+        new_good_example = st.checkbox("Good Example For Paper", value=current_good_example, key=f"good_example_{page}_{i}")
+    with col1:
+        new_negation = st.checkbox("is event negated?", value=current_negation, key=f"negation_{page}_{i}")
+    
+    
     if new_good_example != current_good_example:
         df.at[i, "good_example"] = new_good_example
+        save_data(df)
+        st.cache_data.clear()
+    
+    if new_negation != current_negation:
+        df.at[i, "negation"] = new_negation
         save_data(df)
         st.cache_data.clear()
 

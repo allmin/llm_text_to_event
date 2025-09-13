@@ -11,7 +11,7 @@ event_description_dict_llm = {
                             "Excretion": "The patient discharges waste matter from their body.",
                             "Family": "The patient has a visit, call, or communication with a family member.",
                             "Pain": "The patient reports or shows signs of pain.",
-                            "Sleep": "The patient is sleeping, or the sleep’s quality or quantity is described."
+                            "Sleep": "The patient is sleeping, slept recently or the sleep’s quality or quantity is described."
                             }
 
 event_description_dict_embedder = event_description_dict_llm

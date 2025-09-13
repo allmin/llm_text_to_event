@@ -128,7 +128,7 @@ class EventExtractor:
             self.extract_attributes()
         if len(self.event_detection_time) == 0:
             self.event_detection_time = [""]*len(self.texts)
-        assert len(self.texts) == len(self.predicted_events) == len(self.similarities_dict) == len(self.keywords) == len(self.keyword_positions) == len(self.attributes)== len(self.text_quotes) == len(self.phrases) == len(self.lemmas) == len(self.attribute_dict_list) == len(self.event_name_prompt_list) == len(self.raw_outputs) == len(self.event_detection_time), \
+        assert len(self.texts) == len(self.predicted_events) == len(self.similarities_dict) == len(self.keywords) == len(self.keyword_positions) == len(self.attributes) == len(self.text_quotes) == len(self.phrases) == len(self.lemmas) == len(self.attribute_dict_list) == len(self.event_name_prompt_list) == len(self.raw_outputs) == len(self.event_detection_time), \
             f"{len(self.texts)}, {len(self.predicted_events)}, {len(self.similarities_dict)}, {len(self.keywords)}, {len(self.keyword_positions)}, {len(self.attributes)},{len(self.text_quotes)}, {len(self.phrases)}, {len(self.lemmas)}, {len(self.attribute_dict_list)}, {len(self.event_name_prompt_list)} ,{len(self.raw_outputs)} ,{len(self.event_detection_time)}"
         for text, event, similarity_dict, keyword, keyword_position, attribute, text_quote, phrase, lemma, attribute_dict, prompt, raw_output, time in zip(self.texts, self.predicted_events, self.similarities_dict, self.keywords, self.keyword_positions, self.attributes, self.text_quotes, self.phrases, self.lemmas, self.attribute_dict_list, self.event_name_prompt_list , self.raw_outputs, self.event_detection_time):
             if self.event_name_model_type == "biolord":
@@ -550,7 +550,7 @@ class EventExtractor:
                         event_name = []
                         attributes = []
                         text_quotes = []
-                        for event_inst in event['events']:
+                        for event_inst in event.get('events', []):
                             event_name.append(event_inst.get("event_type","Unknown"))
                             text_quotes.append(event_inst.get("text_quote",""))
                             attributes.append({event_inst.get("event_type","Unknown"):event_inst.get("attributes",{})})
