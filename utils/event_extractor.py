@@ -443,7 +443,7 @@ class EventExtractor:
         task_description = []
         task_description.append("Identify ALL events in the text (zero, one, or more).")
         task_description.append("For each event, assign an event_type from the list above.")
-        task_description.append("If multiple event of same type is mentioned, assign the event_7type multiple times")
+        task_description.append("If multiple event of same type is mentioned, assign the event_type multiple times")
         if self.attribute_output:
             task_description.append("Extract attributes for each event using ONLY the allowed attributes listed below.")
         if self.keyword_input:
@@ -461,7 +461,8 @@ class EventExtractor:
         else:
             classification_rules.append("- If the text is explicitly a NEGATION (e.g., \"denies pain\"), still extract that event and set the negation attribute to true.")
         classification_rules.append("- If the text describes a FUTURE or HYPOTHETICAL event (e.g., \"will eat tomorrow\"), ignore it.")
-        classification_rules.append("""- If no events are found, return {"events": []}""")
+        classification_rules.append("- A valid event should have occurred in the recent past or is occurring during the time of writing of the text.")
+        classification_rules.append("""- If no events are found or if unsure, return {"events": []}""")
         classification_rules = "\n".join(classification_rules)
         return classification_rules
 
