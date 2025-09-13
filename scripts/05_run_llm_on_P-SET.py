@@ -63,7 +63,7 @@ dataset = 'P-SET'
 
 for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:    
     for attribute_output in [attribute_output_raw]:
-        os.makedirs(f"../exports/llm_{llm_type}_{dataset}/{ET}", exist_ok=True)
+        os.makedirs(f"../exports/05_llm_{llm_type}_{dataset}/{ET}", exist_ok=True)
         for analysis_type in ['Sent', 'Doc']:
             try:
                 file = glob(f"../exports/04_groundtruth/{dataset}/Generated/{ET}*{analysis_type}*.pkl")[0]
@@ -102,6 +102,6 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
                 disagreement_df_temp.loc[:,f"Event_Name_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['event'])
                 disagreement_df_temp.loc[:,f"Attribute_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['attributes'])
                 disagreement_df_temp.loc[:,f"Text_Quotes_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['text_quotes'])
-                disagreement_df_temp.to_excel(f"../exports/llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.xlsx", index=False)
-                disagreement_df_temp.to_pickle(f"../exports/llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.pkl")
+                disagreement_df_temp.to_excel(f"../exports/05_llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.xlsx", index=False)
+                disagreement_df_temp.to_pickle(f"../exports/05_llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.pkl")
                 
