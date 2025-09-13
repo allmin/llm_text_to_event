@@ -57,3 +57,5 @@ exports/04_groundtruth/P-SET/Annotating/Pain_Documents.pkl
 exports/04_groundtruth/P-SET/Annotating/Pain_Sentences.pkl
 exports/04_groundtruth/P-SET/Annotating/Sleep_Documents.pkl
 exports/04_groundtruth/P-SET/Annotating/Sleep_Sentences.pkl
+exports/*.pkl
+exports/04_dictionary_biolord_features.pkl
