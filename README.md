@@ -12,6 +12,10 @@ This project focuses on extracting event logs from textual data, specifically us
 
 2. **Set up Ollama**
     - Follow the instructions at [https://github.com/ollama/ollama](https://github.com/ollama/ollama) to install and configure Ollama on your system.
+    - In linux, this would be: 
+    ```bash
+    curl -fsSL https://ollama.com/install.sh | sh
+    ```
 
 3. **Install dependencies**
     ```bash

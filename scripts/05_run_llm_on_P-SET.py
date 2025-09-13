@@ -1,5 +1,6 @@
 # CUDA_VISIBLE_DEVICES=0 python 05_run_llm_on_P-SET.py --attribute_output True
 # CUDA_VISIBLE_DEVICES=1 python 05_run_llm_on_P-SET.py --attribute_output False
+# python 05_run_llm_on_P-SET.py --attribute_output All
 # sudo kill -9 $(nvidia-smi | awk 'NR>8 {print $5}' | grep -E '^[0-9]+$')
 import pandas as pd
 import os, sys
@@ -53,16 +54,26 @@ def combine_lists(x):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--attribute_output', type=bool, default=False, help='Set attribute_output True or False')
+parser.add_argument(
+    '--attribute_output',
+    type=str,
+    choices=['True', 'False', 'All'],
+    default='False',
+    help="Choose between 'True', 'False', or 'All'"
+)
 
 args = parser.parse_args()
-
-attribute_output_raw = args.attribute_output
+mapping = {"True": True, "False": False, "All": "All"}
+value = mapping[args.attribute_output]
+if args.attribute_output in [True, False]:
+    attribute_output_raw = [args.attribute_output]
+elif args.attribute_output == 'All':
+    attribute_output_raw = [True, False]
 print(f'attribute_output:{attribute_output_raw}, type:{type(attribute_output_raw)}')
 dataset = 'P-SET'
 
 for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:    
-    for attribute_output in [attribute_output_raw]:
+    for attribute_output in attribute_output_raw:
         os.makedirs(f"../exports/05_llm_{llm_type}_{dataset}/{ET}", exist_ok=True)
         for analysis_type in ['Sent', 'Doc']:
             try:
