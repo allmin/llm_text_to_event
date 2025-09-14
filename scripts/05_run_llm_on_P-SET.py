@@ -16,19 +16,19 @@ from utils.event_extractor import EventExtractor
 from config import event_types, event_description_dict_llm, llm_type, event_attributes_dict_llm, examples, examples_Ao
 import argparse
 
-def extract_events_funct(texts, extractor=None, evidence={'keywords':[],'event_names':[],'similarities':[]}, keyword_input=None, example_input=None, attribute_output=None):
-    global event_description_dict_llm, event_types, event_attributes_dict_llm, examples, examples_Ao
-    events = extractor.extract_events(texts=texts, 
-                                      event_names=event_types, 
-                                      event_descriptions=event_description_dict_llm, 
-                                      prompt_evidence=evidence, 
-                                      examples=examples_Ao if attribute_output else examples,
-                                      attribute_description_dict=event_attributes_dict_llm,
-                                      attribute_output=attribute_output,
-                                      keyword_input=keyword_input, 
-                                      example_input=example_input,
-                                      )
-    return events
+# def extract_events_funct(texts, extractor=None, evidence={'keywords':[],'event_names':[],'similarities':[]}, keyword_input=None, example_input=None, attribute_output=None):
+#     global event_description_dict_llm, event_types, event_attributes_dict_llm, examples, examples_Ao
+#     events = extractor.extract_events(texts=texts, 
+#                                       event_names=event_types, 
+#                                       event_descriptions=event_description_dict_llm, 
+#                                       prompt_evidence=evidence, 
+#                                       examples=examples_Ao if attribute_output else examples,
+#                                       attribute_description_dict=event_attributes_dict_llm,
+#                                       attribute_output=attribute_output,
+#                                       keyword_input=keyword_input, 
+#                                       example_input=example_input,
+#                                       )
+#     return events
 
 def get_col_suffix(keyword_input, example_input):
     col_suffix = "no"
@@ -101,21 +101,20 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
             for keyword_input, example_input in [i for i in product([True,False],[True,False])]:
                 print(f"keyword_input:{keyword_input}, example_input:{example_input}, attribute_output:{attribute_output}, analysis_type:{analysis_type}")
                 col_suffix = get_col_suffix(keyword_input, example_input)
-                event_extractor_object = EventExtractor(event_name_model_type="llm",
-                                                        attribute_model_type="None",
-                                                        llm_type=llm_type,
-                                                        )
-                disagreement_df_temp.loc[:,f"LLM_Events_{col_suffix}_evidence_{analysis_type}"] = extract_events_funct(texts=input_to_analyse,
-                                                                                                    extractor=event_extractor_object,
-                                                                                                    keyword_input=keyword_input,
-                                                                                                    attribute_output=attribute_output,
-                                                                                                    evidence=evidence)
+                event_extractor_object = EventExtractor(event_name_model_type="llm",attribute_model_type="None",llm_type=llm_type)
+                disagreement_df_temp.loc[:,f"LLM_Events_{col_suffix}_evidence_{analysis_type}"] = event_extractor_object.extract_events(texts=input_to_analyse, 
+                                                                                                                    event_names=event_types, 
+                                                                                                                    event_descriptions=event_description_dict_llm, 
+                                                                                                                    prompt_evidence=evidence, 
+                                                                                                                    examples=examples_Ao if attribute_output else examples,
+                                                                                                                    attribute_description_dict=event_attributes_dict_llm,
+                                                                                                                    attribute_output=attribute_output,
+                                                                                                                    keyword_input=keyword_input, 
+                                                                                                                    example_input=example_input,
+                                                                                                                    )
                 disagreement_df_temp.loc[:,f"Event_Name_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['event'])
                 disagreement_df_temp.loc[:,f"Attribute_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['attributes'])
                 disagreement_df_temp.loc[:,f"Text_Quotes_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['text_quotes'])
                 disagreement_df_temp.to_excel(f"../exports/05_llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.xlsx", index=False)
                 disagreement_df_temp.to_pickle(f"../exports/05_llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.pkl")
-                
-                
-tobj=extract_events_funct(texts=input_to_analyse[347:349], extractor=event_extractor_object, keyword_input=keyword_input, attribute_output=attribute_output, evidence=evidence)
                 

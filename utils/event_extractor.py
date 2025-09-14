@@ -556,8 +556,8 @@ class EventExtractor:
                             text_quotes.append(event_inst.get("text_quote",""))
                             attributes.append({event_inst.get("event_type","Unknown"):event_inst.get("attributes",{})})
                         # print("raw_output:",event,"attributes:", attributes)
-                    except json.JSONDecodeError:
-                        pass
+                    except Exception as e:
+                        print(f"Exception: {e}, Index: {ind}, Text: {text}, JSON Response: {json_response}")
                 self.predicted_events.append(event_name)
                 self.attributes.append(attributes)
                 self.raw_outputs.append(raw_output)
