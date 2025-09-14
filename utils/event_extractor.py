@@ -598,7 +598,7 @@ if __name__ == "__main__":
     mtexts = ["""had difficulty falling asleep but refused serax. slept very well. became disoriented from 3:00-5:00, knew he was still in hospital but asked about, "the dog in the room."""]
     mtexts = ["""CCU NSG ADMIT NOTE.\n19 year old FEMALE ADMITTED TO CCU status post VF ARREST.\n\nPMH:NOT SIGNIFICANT.\n\nALLERGIES:NKDA.\n\nMEDS:MULTIPLE OVER THE COUNTER DIET SUPRESSENTS.\n\nhistory:?VIRAL SYNDROME APPROX 2 WEEKS AGO. TAKING DIET SURPRESSENTS- ?ONSET OF USE (PER FAMILY PLANNING [**State 2968**] VACATION OVER HOLIDAY-?ING ONSET OF DIET SURPRESSENTS). [**1-8**] AM ONSET ACUTE DYSPNEA W PROGRESSION TO CARDIAC ARREST-VF. INTUBATED & DEFIB TO ST IN FIELD-TRANSPORTED TO [**Hospital1 2**]. AGGRESSIVELY RXED IN EW. CT HEAD/CHEST-NEG FOR INTRACRANIAL HEMORRHAGE & PE. FEBRILE-PAN CULTURED & ABX STARTED. PROGRESSIVELY DETERIORATED- REQUIRING PRESSORS & APPROX 4L FL-TO CARD CATH LAD-CLEAN C'S, BUT ELEVATED FILLING PRESSURES-W 30'S-RX W LASIX & ADMITTED TO CCU FOR FURTHER MANAGEMENT.\n   ECHO=SEVER GLOBAL LV HK. LV FUNCTION SEVERLY DEPRESSED. RV FUNCTION DEPRESSED. 1+MR.\n\nSOCIAL:BU STUDENT-2ND YEAR. FROM ILL. PARENTS CONTACT[**Name (NI) **] & BOTH PRESENT. HAS 2 OTHER SIBLINGS IN ILL. NON SMOKER & ?LIMITED DRINKER.\n\n\n"""]
     mtexts = ["The patient slept in the morning, took a nap in the afternoon, and had a good night's sleep."]
-    mtexts = ["no c/o chest pain or sob"]
+    mtexts = ["a-line d/c'd", 'no c/o chest pain or sob']
 #     mtexts = ['bp lower when asleep',
 #  'sleeping in naps',
 #  'slept well',
@@ -627,21 +627,17 @@ if __name__ == "__main__":
     print("BIOLORD_events:",[i['Sleep'] for i in BIOLORD.similarities_dict])
 
 
-    
-    # LLAMA1 = EventExtractor(event_name_model_type='llm', attribute_model_type='None')
-    
-    # LLAMA1.extract_events(texts=mtexts, event_names=mevent_names)
-    # print("LLAMA_no_evidence_events:",LLAMA1.event_list)
     from config import event_description_dict_llm, event_attributes_dict_llm, examples, examples_Ao
     LLAMA2 = EventExtractor(event_name_model_type='llm', attribute_model_type='None',llm_type = "llama3.1:70b")   
+    attribute_output = True
     LLAMA2.extract_events(texts=mtexts, event_names=mevent_names, 
                                 event_descriptions=event_description_dict_llm,
                                 prompt_evidence={'keywords':DICT.keywords, 
                                                  'event_names':DICT.predicted_events, 
                                                  'similarities':BIOLORD.similarities_dict},
-                                examples=examples_Ao,
+                                examples=examples_Ao if attribute_output else examples,
                                 attribute_description_dict=event_attributes_dict_llm,
-                                attribute_output=True, 
+                                attribute_output=attribute_output, 
                                 keyword_input=True, example_input=True,)
     print("LLAMA_all_evidence_events:",LLAMA2.event_list[0]["attributes"], LLAMA2.event_list[0]["text_quotes"])
     # sudo kill -9 $(nvidia-smi | awk 'NR>8 {print $5}' | grep -E '^[0-9]+$')
