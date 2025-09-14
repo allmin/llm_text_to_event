@@ -101,12 +101,12 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
             for keyword_input, example_input in [i for i in product([True,False],[True,False])]:
                 print(f"keyword_input:{keyword_input}, example_input:{example_input}, attribute_output:{attribute_output}, analysis_type:{analysis_type}")
                 col_suffix = get_col_suffix(keyword_input, example_input)
+                event_extractor_object = EventExtractor(event_name_model_type="llm",
+                                                        attribute_model_type="None",
+                                                        llm_type=llm_type,
+                                                        )
                 disagreement_df_temp.loc[:,f"LLM_Events_{col_suffix}_evidence_{analysis_type}"] = extract_events_funct(texts=input_to_analyse,
-                                                                                                    extractor=EventExtractor(
-                                                                                                        event_name_model_type="llm",
-                                                                                                        attribute_model_type="None",
-                                                                                                        llm_type=llm_type,
-                                                                                                        ),
+                                                                                                    extractor=event_extractor_object,
                                                                                                     keyword_input=keyword_input,
                                                                                                     attribute_output=attribute_output,
                                                                                                     evidence=evidence)
@@ -115,4 +115,7 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
                 disagreement_df_temp.loc[:,f"Text_Quotes_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['text_quotes'])
                 disagreement_df_temp.to_excel(f"../exports/05_llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.xlsx", index=False)
                 disagreement_df_temp.to_pickle(f"../exports/05_llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.pkl")
+                
+                
+tobj=extract_events_funct(texts=input_to_analyse[347:349], extractor=event_extractor_object, keyword_input=keyword_input, attribute_output=attribute_output, evidence=evidence)
                 
