@@ -63,11 +63,14 @@ parser.add_argument(
 )
 
 args = parser.parse_args()
+
 mapping = {"True": True, "False": False, "All": "All"}
 value = mapping[args.attribute_output]
-if args.attribute_output in [True, False]:
+print(value)
+
+if value in [True, False]:
     attribute_output_raw = [args.attribute_output]
-elif args.attribute_output == 'All':
+elif value == 'All':
     attribute_output_raw = [True, False]
 print(f'attribute_output:{attribute_output_raw}, type:{type(attribute_output_raw)}')
 dataset = 'P-SET'
@@ -92,7 +95,7 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
                 disagreement_df_temp = df.groupby('ROW_ID')[["Event_Name","Keyword","Document"]].agg(lambda x:combine_lists(x)).reset_index()
                 disagreement_df_temp['Document'] = [i[0] for i in disagreement_df_temp['Document']]
                 input_to_analyse = disagreement_df_temp.Document.tolist()
-            print(ET,len(disagreement_df_temp), datetime.now().strftime("%Y-%m-%d %H:%M:%S"), file_name)
+            print(f"Event Type: {ET} | Rows: {len(disagreement_df_temp)} | Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | File: {file_name}")
             print(f'attribute_output:{attribute_output}, Time Start: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
             evidence={'keywords':disagreement_df_temp.Keyword.tolist(), 'event_names':disagreement_df_temp.Event_Name.tolist(), }
             for keyword_input, example_input in [i for i in product([True,False],[True,False])]:
