@@ -553,11 +553,11 @@ class EventExtractor:
                         text_quotes = []
                         for event_inst in event.get('events', []):
                             event_name.append(event_inst.get("event_type","Unknown"))
-                            text_quotes.append(event_inst.get("text_quote",""))
+                            text_quotes.append(event_inst.get("text_quote","Unknown"))
                             attributes.append({event_inst.get("event_type","Unknown"):event_inst.get("attributes",{})})
-                        # print("raw_output:",event,"attributes:", attributes)
                     except Exception as e:
                         print(f"Exception: {e}, Index: {ind}, Text: {text}, JSON Response: {json_response}")
+                assert len(event_name) == len(text_quotes) == len(attributes), f"{len(event_name)}, {len(text_quotes)}, {len(attributes)}"
                 self.predicted_events.append(event_name)
                 self.attributes.append(attributes)
                 self.raw_outputs.append(raw_output)
