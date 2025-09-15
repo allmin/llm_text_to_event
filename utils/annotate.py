@@ -106,7 +106,11 @@ st.write(f"Showing rows {start_idx} to {end_idx - 1} of {len(df)}")
 
 # Auto-saving corrections
 for i, row in subset.iterrows():
-    st.markdown(f"**Row {i}** — UID: `{row['UID']}` — Keyword: `{row['Keyword']}`")
+    if st.session_state.focus == "Doc":
+        id = "ROW_ID"
+    else:
+        id = "UID"
+    st.markdown(f"**Row {i}** — ID: `{row[id]}` — Keyword: `{row['Keyword']}`")
 
     # Highlight keyword in sentence
     pattern = re.escape(str(row["Keyword"]))

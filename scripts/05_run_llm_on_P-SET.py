@@ -92,8 +92,9 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
                 disagreement_df_temp = df.copy()
                 input_to_analyse = disagreement_df_temp.Sentence.tolist()
             elif analysis_type == 'Doc':
-                disagreement_df_temp = df.groupby('ROW_ID')[["Event_Name","Keyword","Document"]].agg(lambda x:combine_lists(x)).reset_index()
-                disagreement_df_temp['Document'] = [i[0] for i in disagreement_df_temp['Document']]
+                disagreement_df_temp = df.copy()
+                # disagreement_df_temp = df.groupby('ROW_ID')[["Event_Name","Keyword","Document"]].agg(lambda x:combine_lists(x)).reset_index()
+                # disagreement_df_temp['Document'] = [i[0] for i in disagreement_df_temp['Document']]
                 input_to_analyse = disagreement_df_temp.Document.tolist()
             print(f"Event Type: {ET} | Rows: {len(disagreement_df_temp)} | Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | File: {file_name}")
             print(f'attribute_output:{attribute_output}, Time Start: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
