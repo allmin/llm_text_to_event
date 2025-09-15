@@ -36,6 +36,8 @@ def load_data(path):
         df["negation"] = False
     if "good_example" not in df.columns:
         df["good_example"] = False
+    if "comment" not in df.columns:
+        df['comment'] = ''
     df.index = range(len(df))
     return df
 
@@ -150,12 +152,15 @@ for i, row in subset.iterrows():
     
     current_good_example = df.loc[i, "good_example"]
     current_negation = df.loc[i, "negation"]
+    current_comment = df.loc[i, "comment"]
     
-    col1, col2 = st.columns(2)
-    with col2:
-        new_good_example = st.checkbox("Good Example For Paper", value=current_good_example, key=f"good_example_{page}_{i}")
+    col1, col2, col3 = st.columns(3)
     with col1:
         new_negation = st.checkbox("is event negated?", value=current_negation, key=f"negation_{page}_{i}")
+    with col2:
+        new_good_example = st.checkbox("Good Example For Paper", value=current_good_example, key=f"good_example_{page}_{i}")
+    with col3:
+        new_comment = st.text_input("Comment", value=current_comment, key=f"comment_{page}_{i}")
     
     
     if new_good_example != current_good_example:
@@ -165,6 +170,11 @@ for i, row in subset.iterrows():
     
     if new_negation != current_negation:
         df.at[i, "negation"] = new_negation
+        save_data(df)
+        st.cache_data.clear()
+    
+    if new_comment != current_comment:
+        df.at[i, "comment"] = new_comment
         save_data(df)
         st.cache_data.clear()
 
