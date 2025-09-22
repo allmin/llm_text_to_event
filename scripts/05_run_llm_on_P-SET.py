@@ -1,6 +1,8 @@
 # CUDA_VISIBLE_DEVICES=0 python 05_run_llm_on_P-SET.py --attribute_output True
 # CUDA_VISIBLE_DEVICES=1 python 05_run_llm_on_P-SET.py --attribute_output False
 # python -i 05_run_llm_on_P-SET.py --attribute_output All
+# nohup ollama serve > ollama.log 2>&1 &
+#  srun --partition=gpu_h100 --gres=gpu:1 --cpus-per-task=16 --mem=100G --time=8:00:00 --pty bash -i
 # sudo kill -9 $(nvidia-smi | awk 'NR>8 {print $5}' | grep -E '^[0-9]+$')
 import pandas as pd
 import os, sys
@@ -78,7 +80,7 @@ dataset = 'P-SET'
 for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:    
     for attribute_output in attribute_output_raw:
         os.makedirs(f"../exports/05_llm_{llm_type}_{dataset}/{ET}", exist_ok=True)
-        for analysis_type in ['Sent', 'Doc']:
+        for analysis_type in ['Sent', 'Doc'][-1:]:
             try:
                 file = glob(f"../exports/04_groundtruth/{dataset}/Generated/{ET}*{analysis_type}*.pkl")[0]
             except:
@@ -99,7 +101,7 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
             print(f"Event Type: {ET} | Rows: {len(disagreement_df_temp)} | Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | File: {file_name}")
             print(f'attribute_output:{attribute_output}, Time Start: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
             evidence={'keywords':disagreement_df_temp.Keyword.tolist(), 'event_names':disagreement_df_temp.Event_Name.tolist(), }
-            for keyword_input, example_input in [i for i in product([True,False],[True,False])]:
+            for keyword_input, example_input in [i for i in product([True],[True])]:
                 print(f"keyword_input:{keyword_input}, example_input:{example_input}, attribute_output:{attribute_output}, analysis_type:{analysis_type}")
                 col_suffix = get_col_suffix(keyword_input, example_input)
                 event_extractor_object = EventExtractor(event_name_model_type="llm",attribute_model_type="None",llm_type=llm_type)
@@ -115,7 +117,8 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
                                                                                                                     )
                 disagreement_df_temp.loc[:,f"Event_Name_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['event'])
                 disagreement_df_temp.loc[:,f"Attribute_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['attributes'])
-                disagreement_df_temp.loc[:,f"Text_Quotes_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['text_quotes'])
+                disagreement_df_temp.loc[:,f"Text_Quote_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['text_quotes'])
+                disagreement_df_temp.loc[:,f"Order_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['orders'])                
                 disagreement_df_temp.to_excel(f"../exports/05_llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.xlsx", index=False)
                 disagreement_df_temp.to_pickle(f"../exports/05_llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.pkl")
                 

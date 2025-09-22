@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=llm-event-extraction-True
+#SBATCH --job-name=llm-event-extraction-All
 #SBATCH --output=logs/event_llm_%j.out   
 #SBATCH --error=logs/event_llm_%j.err
 #SBATCH --ntasks-per-node=1
@@ -8,7 +8,7 @@
 #SBATCH --partition=gpu_h100
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=180G
-#SBATCH --time=48:00:00
+#SBATCH --time=3:00:00
 #SBATCH --signal=B:USR1@60
 
 # -----------------------------
@@ -64,9 +64,10 @@ export $(grep -v '^#' .env | xargs)
 # -----------------------------
 nvidia-smi
 cd scripts
-python 05_run_llm_on_P-SET.py --attribute_output All
+python 05_run_llm_on_P-SET.py --attribute_output True
 nvidia-smi
 # python event_extractor.py
 # sbatch --mail-type=ALL --mail-user=a.p.s.susaiyah@tue.nl run_llm_snellius.sh
 # srun --partition=gpu_a100 --gres=gpu:1 --cpus-per-task=18 --mem=100G --time=8:00:00 --pty bash -i
+# srun --partition=gpu_mig --reservation=terv92681 --gres=gpu:1 --mem=60G --time=24:00:00 --pty bash -i
 # srun --partition=gpu_a100 --gres=gpu:1 --cpus-per-task=18 --mem=100G --time=8:00:00 jupyter lab --no-browser --port=8888

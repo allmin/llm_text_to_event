@@ -458,15 +458,15 @@ class EventExtractor:
     
     def get_classification_results(self):
         classification_rules = []
-        classification_rules.append("- A text may contain multiple events of the same or different types.")
+        classification_rules.append("- A text may contain multiple events, either of the same type or of different types.")
         classification_rules.append("- Create a separate event object for each event mention.")
+        classification_rules.append("- Do not extract events that are explicitly NEGATED (e.g., \"denies pain\", \"couldn\'t sleep\") unless the event is marked as \"Identifed Always\".")
         if self.attribute_output:
-            classification_rules.append("- If the text is explicitly a NEGATION (e.g., \"denies pain\"), do not extract that event.")
-        else:
-            classification_rules.append("- If the text is explicitly a NEGATION (e.g., \"denies pain\"), still extract that event and set the negation attribute to true.")
-        classification_rules.append("- If the text describes a FUTURE or HYPOTHETICAL event (e.g., \"will eat tomorrow\"), ignore it.")
-        classification_rules.append("- A valid event should have occurred in the recent past or is occurring during the time of writing of the text.")
-        classification_rules.append("""- If no events are found or if unsure, return {"events": []}""")
+            classification_rules.append("- If a NEGATED event is marked as Identified Always, extract it and set the negation attribute to true.")
+
+        classification_rules.append("- Ignore events that refer to FUTURE or HYPOTHETICAL scenarios (e.g., \"will eat tomorrow\").")
+        classification_rules.append("- A valid event must have occurred in the recent past or be occurring at the time of writing.")
+        classification_rules.append("- If no events are found, or if uncertain, return: {\"events\": []}")
         classification_rules = "\n".join(classification_rules)
         return classification_rules
 
