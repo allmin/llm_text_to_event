@@ -66,3 +66,8 @@ exports/05_llm_llama3.1:70b_P-SET copy/Sleep/Sleep_10_210_4783_164_att_False.xls
 exports/05_llm_llama3.1:70b_P-SET copy/Sleep/Sleep_10_210_4783_164_att_True.pkl
 exports/05_llm_llama3.1:70b_P-SET copy/Sleep/Sleep_10_210_4783_164_att_True.xlsx
 exports/temp*
+exports/05_llm_llama3.1:70b_P-SET_15sep/Sleep/Sleep_10_210_4783_164_att_False.pkl
+exports/05_llm_llama3.1:70b_P-SET_15sep/Sleep/Sleep_10_210_4783_164_att_False.xlsx
+exports/05_llm_llama3.1:70b_P-SET_15sep/Sleep/Sleep_10_210_4783_164_att_True.pkl
+exports/05_llm_llama3.1:70b_P-SET_15sep/Sleep/Sleep_10_210_4783_164_att_True.xlsx
+ollama.log

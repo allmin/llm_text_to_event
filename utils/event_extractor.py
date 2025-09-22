@@ -54,6 +54,7 @@ class EventExtractor:
         
         self.is_event_cache = {}
         self.event_name_cache = {}
+        self.event_id_cache = {}
         self.attributes_cache = {}
         self.keywords_cache = {}
         self.lemmas_cache = {}
@@ -63,6 +64,7 @@ class EventExtractor:
         self.phrases_cache = {}
         self.positions_cache = {}
         self.text_quotes_cache = {}
+        self.orders_cache = {}
     
     
     def lemmatize_keyword(self,keyword):
@@ -104,6 +106,8 @@ class EventExtractor:
         self.attribute_description_dict = attribute_description_dict
         self.similarities_dict = [{}]*len(self.texts)
         self.attributes = [""]*len(self.texts)
+        self.orders = [""]*len(self.texts)
+        self.event_id = [""]*len(self.texts)
         self.text_quotes = [""]*len(self.texts)
         self.attribute_dict_list = [""]*len(self.texts)
         self.keywords = [""]*len(self.texts)
@@ -128,15 +132,15 @@ class EventExtractor:
             self.extract_attributes()
         if len(self.event_detection_time) == 0:
             self.event_detection_time = [""]*len(self.texts)
-        assert len(self.texts) == len(self.predicted_events) == len(self.similarities_dict) == len(self.keywords) == len(self.keyword_positions) == len(self.attributes) == len(self.text_quotes) == len(self.phrases) == len(self.lemmas) == len(self.attribute_dict_list) == len(self.event_name_prompt_list) == len(self.raw_outputs) == len(self.event_detection_time), \
-            f"{len(self.texts)}, {len(self.predicted_events)}, {len(self.similarities_dict)}, {len(self.keywords)}, {len(self.keyword_positions)}, {len(self.attributes)},{len(self.text_quotes)}, {len(self.phrases)}, {len(self.lemmas)}, {len(self.attribute_dict_list)}, {len(self.event_name_prompt_list)} ,{len(self.raw_outputs)} ,{len(self.event_detection_time)}"
-        for text, event, similarity_dict, keyword, keyword_position, attribute, text_quote, phrase, lemma, attribute_dict, prompt, raw_output, time in zip(self.texts, self.predicted_events, self.similarities_dict, self.keywords, self.keyword_positions, self.attributes, self.text_quotes, self.phrases, self.lemmas, self.attribute_dict_list, self.event_name_prompt_list , self.raw_outputs, self.event_detection_time):
+        assert len(self.texts) == len(self.predicted_events) == len(self.event_id) == len(self.similarities_dict) == len(self.keywords) == len(self.keyword_positions) == len(self.attributes)== len(self.orders) == len(self.text_quotes) == len(self.phrases) == len(self.lemmas) == len(self.attribute_dict_list) == len(self.event_name_prompt_list) == len(self.raw_outputs) == len(self.event_detection_time), \
+            f"{len(self.texts)}, {len(self.predicted_events)}, {len(self.event_id)}, {len(self.similarities_dict)}, {len(self.keywords)}, {len(self.keyword_positions)}, {len(self.attributes)}, {len(self.orders)}, {len(self.text_quotes)}, {len(self.phrases)}, {len(self.lemmas)}, {len(self.attribute_dict_list)}, {len(self.event_name_prompt_list)} ,{len(self.raw_outputs)} ,{len(self.event_detection_time)}"
+        for text, event, event_id, similarity_dict, keyword, keyword_position, attribute, order, text_quote, phrase, lemma, attribute_dict, prompt, raw_output, time in zip(self.texts, self.predicted_events, self.event_id, self.similarities_dict, self.keywords, self.keyword_positions, self.attributes,self.orders, self.text_quotes, self.phrases, self.lemmas, self.attribute_dict_list, self.event_name_prompt_list , self.raw_outputs, self.event_detection_time):
             if self.event_name_model_type == "biolord":
                 self.event_list.append({"text":text, "event":event, "similarity":similarity_dict, "attributes": attribute_dict, "event_detection_time":time})
             elif self.event_name_model_type == "dictionary":
                 self.event_list.append({"text":text, "event":event, "keyword":keyword, "keyword_position":keyword_position, "lemma":lemma, "attributes": attribute_dict, "event_detection_time":time})
             elif self.event_name_model_type == "llm":
-                self.event_list.append({"text":text, "event":event, "phrase":phrase, "raw_output":raw_output, "attributes": attribute,"text_quotes": text_quote, "event_name_prompt":prompt, "event_detection_time":time})
+                self.event_list.append({"text":text, "event":event,"event_id":event_id, "phrase":phrase, "raw_output":raw_output, "attributes": attribute, "orders": order, "text_quotes": text_quote, "event_name_prompt":prompt, "event_detection_time":time})
             else:
                 self.event_list.append({"text":text, "event":event, "attributes": attribute_dict, "event_detection_time":time})
         return self.event_list
@@ -454,25 +458,27 @@ class EventExtractor:
     
     def get_classification_results(self):
         classification_rules = []
-        classification_rules.append("- A text may contain multiple events of the same or different types.")
+        classification_rules.append("- A text may contain multiple events, either of the same type or of different types.")
         classification_rules.append("- Create a separate event object for each event mention.")
+        classification_rules.append("- Do not extract events that are explicitly NEGATED (e.g., \"denies pain\", \"couldn\'t sleep\") unless the event is marked as \"Identifed Always\".")
         if self.attribute_output:
-            classification_rules.append("- If the text is explicitly a NEGATION (e.g., \"denies pain\"), do not extract that event.")
-        else:
-            classification_rules.append("- If the text is explicitly a NEGATION (e.g., \"denies pain\"), still extract that event and set the negation attribute to true.")
-        classification_rules.append("- If the text describes a FUTURE or HYPOTHETICAL event (e.g., \"will eat tomorrow\"), ignore it.")
-        classification_rules.append("- A valid event should have occurred in the recent past or is occurring during the time of writing of the text.")
-        classification_rules.append("""- If no events are found or if unsure, return {"events": []}""")
+            classification_rules.append("- If a NEGATED event is marked as Identified Always, extract it and set the negation attribute to true.")
+
+        classification_rules.append("- Ignore events that refer to FUTURE or HYPOTHETICAL scenarios (e.g., \"will eat tomorrow\").")
+        classification_rules.append("- A valid event must have occurred in the recent past or be occurring at the time of writing.")
+        classification_rules.append("- If no events are found, or if uncertain, return: {\"events\": []}")
         classification_rules = "\n".join(classification_rules)
         return classification_rules
 
     def extract_event_names_llama(self):
         self.event_detection_time = []
         self.predicted_events = []
+        self.event_id = []
         self.event_name_prompt_list = []
         self.raw_outputs = []
         self.attributes = []
         self.text_quotes = []
+        self.orders = []
         for ind, text in tqdm(enumerate(self.texts)):
             used_cache = False
             start_time = time.perf_counter()
@@ -502,9 +508,13 @@ class EventExtractor:
             output_format = f"""{{
                                     "events": [
                                         {{
+                                        "event_id": "< A unique id eg.: e1 | e2 |...>"
                                         "event_type": "<{" | ".join(self.predefined_event_names)}>",
-                                        "text_quote": "<fragement from the text indicating >"{extra_json}
+                                        "text_quote": "<fragement from the text indicating the event_type>"{extra_json}
                                         }}
+                                    ],
+                                    "order": [
+                                        ["e1", "before" | "after" | "simultaneous", "e2" ]
                                     ]
                                     }}"""                     
             output_rules = f"""
@@ -541,32 +551,42 @@ class EventExtractor:
             if text in self.event_name_cache:
                 used_cache = True
                 self.predicted_events.append(self.event_name_cache[text])
+                self.event_id.append(self.event_id_cache[text])
                 self.attributes.append(self.attributes_cache[text])
                 self.text_quotes.append(self.text_quotes_cache[text])
                 self.raw_outputs.append(self.raw_output_cache[text])
+                self.orders.append(self.orders_cache[text])
             else:                
-                json_response, raw_output = self.get_json_response(prompt)
-                if json_response:
+                self.json_response, raw_output = self.get_json_response(prompt)
+                if self.json_response:
                     try:
-                        event = json.loads(json_response)
+                        event = json.loads(self.json_response)
+                        event_id = []
                         event_name = []
                         attributes = []
                         text_quotes = []
+                        orders = []
                         for event_inst in event.get('events', []):
+                            event_id.append(event_inst.get("event_id","Unknown"))
                             event_name.append(event_inst.get("event_type","Unknown"))
                             text_quotes.append(event_inst.get("text_quote","Unknown"))
-                            attributes.append({event_inst.get("event_type","Unknown"):event_inst.get("attributes",{})})
+                            attributes.append({event_inst.get("event_type","Unknown"):event_inst.get("attributes",{})}) 
+                        orders.append(event.get("order","[]"))
                     except Exception as e:
-                        print(f"Exception: {e}, Index: {ind}, Text: {text}, JSON Response: {json_response}")
+                        print(f"Exception: {e}, Index: {ind}, Text: {text}, JSON Response: {self.json_response}")
                 assert len(event_name) == len(text_quotes) == len(attributes), f"{len(event_name)}, {len(text_quotes)}, {len(attributes)}"
                 self.predicted_events.append(event_name)
+                self.event_id.append(event_id)
                 self.attributes.append(attributes)
                 self.raw_outputs.append(raw_output)
                 self.text_quotes.append(text_quotes)
+                self.orders.append(orders)
                 self.event_name_cache[text]=event_name
+                self.event_id_cache[text]=event_id
                 self.attributes_cache[text]=attributes
                 self.raw_output_cache[text]=raw_output
                 self.text_quotes_cache[text]=text_quotes
+                self.orders_cache[text]=orders
             self.event_name_prompt_list.append(prompt)
             end_time = time.perf_counter()
             elapsed_time = end_time - start_time
@@ -599,7 +619,7 @@ if __name__ == "__main__":
     mtexts = ["""had difficulty falling asleep but refused serax. slept very well. became disoriented from 3:00-5:00, knew he was still in hospital but asked about, "the dog in the room."""]
     mtexts = ["""CCU NSG ADMIT NOTE.\n19 year old FEMALE ADMITTED TO CCU status post VF ARREST.\n\nPMH:NOT SIGNIFICANT.\n\nALLERGIES:NKDA.\n\nMEDS:MULTIPLE OVER THE COUNTER DIET SUPRESSENTS.\n\nhistory:?VIRAL SYNDROME APPROX 2 WEEKS AGO. TAKING DIET SURPRESSENTS- ?ONSET OF USE (PER FAMILY PLANNING [**State 2968**] VACATION OVER HOLIDAY-?ING ONSET OF DIET SURPRESSENTS). [**1-8**] AM ONSET ACUTE DYSPNEA W PROGRESSION TO CARDIAC ARREST-VF. INTUBATED & DEFIB TO ST IN FIELD-TRANSPORTED TO [**Hospital1 2**]. AGGRESSIVELY RXED IN EW. CT HEAD/CHEST-NEG FOR INTRACRANIAL HEMORRHAGE & PE. FEBRILE-PAN CULTURED & ABX STARTED. PROGRESSIVELY DETERIORATED- REQUIRING PRESSORS & APPROX 4L FL-TO CARD CATH LAD-CLEAN C'S, BUT ELEVATED FILLING PRESSURES-W 30'S-RX W LASIX & ADMITTED TO CCU FOR FURTHER MANAGEMENT.\n   ECHO=SEVER GLOBAL LV HK. LV FUNCTION SEVERLY DEPRESSED. RV FUNCTION DEPRESSED. 1+MR.\n\nSOCIAL:BU STUDENT-2ND YEAR. FROM ILL. PARENTS CONTACT[**Name (NI) **] & BOTH PRESENT. HAS 2 OTHER SIBLINGS IN ILL. NON SMOKER & ?LIMITED DRINKER.\n\n\n"""]
     mtexts = ["The patient slept in the morning, took a nap in the afternoon, and had a good night's sleep."]
-    mtexts = ["The patient couldn't eat due to severe pain in the throat."]
+    mtexts = ["The patient couldn't eat due to severe pain in the throat.", "Due to the constipation, the patient couldnt sleep well and was in constant pain thought the day"]
     
 #     mtexts = ['bp lower when asleep',
 #  'sleeping in naps',
@@ -641,7 +661,9 @@ if __name__ == "__main__":
                                 attribute_description_dict=event_attributes_dict_llm,
                                 attribute_output=attribute_output, 
                                 keyword_input=True, example_input=True,)
-    print("LLAMA_all_evidence_events:",LLAMA2.event_list[0]["attributes"], LLAMA2.event_list[0]["text_quotes"])
+    print("LLAMA_all_evidence_events:",LLAMA2.event_list[0]["attributes"], 
+          LLAMA2.event_list[0]["text_quotes"],
+          LLAMA2.orders)
     # sudo kill -9 $(nvidia-smi | awk 'NR>8 {print $5}' | grep -E '^[0-9]+$')
     #  srun --partition=gpu_h100 --gres=gpu:2 --cpus-per-task=18 --mem=100G --time=8:00:00 --pty bash -i
     
