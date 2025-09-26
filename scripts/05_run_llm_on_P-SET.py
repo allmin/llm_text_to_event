@@ -15,22 +15,11 @@ parent_dir = os.path.abspath(os.path.join(os.getcwd(), '..'))
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 from utils.event_extractor import EventExtractor
-from config import event_types, event_description_dict_llm, llm_type, event_attributes_dict_llm, examples, examples_Ao
+from utils.evaluation_samples import focus_ids
+from config import event_types, event_description_dict_llm
 import argparse
 
-# def extract_events_funct(texts, extractor=None, evidence={'keywords':[],'event_names':[],'similarities':[]}, keyword_input=None, example_input=None, attribute_output=None):
-#     global event_description_dict_llm, event_types, event_attributes_dict_llm, examples, examples_Ao
-#     events = extractor.extract_events(texts=texts, 
-#                                       event_names=event_types, 
-#                                       event_descriptions=event_description_dict_llm, 
-#                                       prompt_evidence=evidence, 
-#                                       examples=examples_Ao if attribute_output else examples,
-#                                       attribute_description_dict=event_attributes_dict_llm,
-#                                       attribute_output=attribute_output,
-#                                       keyword_input=keyword_input, 
-#                                       example_input=example_input,
-#                                       )
-#     return events
+
 
 def get_col_suffix(keyword_input, example_input):
     col_suffix = "no"
@@ -77,10 +66,16 @@ elif value == 'All':
 print(f'attribute_output:{attribute_output_raw}, type:{type(attribute_output_raw)}')
 dataset = 'P-SET'
 
+
+llm_type="lambda3.1:70b"
 for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:    
     for attribute_output in attribute_output_raw:
         os.makedirs(f"../exports/05_llm_{llm_type}_{dataset}/{ET}", exist_ok=True)
         for analysis_type in ['Sent', 'Doc'][-1:]:
+            if analysis_type == 'Sent':
+                uid = 'UID'
+            elif analysis_type == 'Doc':
+                uid = 'ROW_ID'
             try:
                 file = glob(f"../exports/04_groundtruth/{dataset}/Generated/{ET}*{analysis_type}*.pkl")[0]
             except:
@@ -88,37 +83,36 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
                 continue
             file_name = os.path.basename(file).strip(".pkl")
             df = pd.read_pickle(file)
+            print(analysis_type, len(df))
+            df = df[df[uid].astype(str).isin(focus_ids[analysis_type])]
+            print(analysis_type, len(df))
             df['Event_Name'] = [tuple(i) for i in df['Event_Name']]
             df['Keyword'] = [tuple(i) for i in df['Keyword']]
             if analysis_type == 'Sent':
-                disagreement_df_temp = df.copy()
-                input_to_analyse = disagreement_df_temp.Sentence.tolist()
+                df_temp = df.copy()
+                input_to_analyse = df_temp.Sentence.tolist()
             elif analysis_type == 'Doc':
-                disagreement_df_temp = df.copy()
-                # disagreement_df_temp = df.groupby('ROW_ID')[["Event_Name","Keyword","Document"]].agg(lambda x:combine_lists(x)).reset_index()
-                # disagreement_df_temp['Document'] = [i[0] for i in disagreement_df_temp['Document']]
-                input_to_analyse = disagreement_df_temp.Document.tolist()
-            print(f"Event Type: {ET} | Rows: {len(disagreement_df_temp)} | Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | File: {file_name}")
+                df_temp = df.copy()
+                input_to_analyse = df_temp.Document.tolist()
+            print(f"Event Type: {ET} | Rows: {len(df_temp)} | Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | File: {file_name}")
             print(f'attribute_output:{attribute_output}, Time Start: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
-            evidence={'keywords':disagreement_df_temp.Keyword.tolist(), 'event_names':disagreement_df_temp.Event_Name.tolist(), }
+            evidence={'keywords':df_temp.Keyword.tolist(), 'event_names':df_temp.Event_Name.tolist(), }
             for keyword_input, example_input in [i for i in product([True],[True])]:
                 print(f"keyword_input:{keyword_input}, example_input:{example_input}, attribute_output:{attribute_output}, analysis_type:{analysis_type}")
                 col_suffix = get_col_suffix(keyword_input, example_input)
                 event_extractor_object = EventExtractor(event_name_model_type="llm",attribute_model_type="None",llm_type=llm_type)
-                disagreement_df_temp.loc[:,f"LLM_Events_{col_suffix}_evidence_{analysis_type}"] = event_extractor_object.extract_events(texts=input_to_analyse, 
+                df_temp.loc[:,f"LLM_Events_{col_suffix}_evidence_{analysis_type}"] = event_extractor_object.extract_events(texts=input_to_analyse, 
                                                                                                                     event_names=event_types, 
                                                                                                                     event_descriptions=event_description_dict_llm, 
                                                                                                                     prompt_evidence=evidence, 
-                                                                                                                    examples=examples_Ao if attribute_output else examples,
-                                                                                                                    attribute_description_dict=event_attributes_dict_llm,
                                                                                                                     attribute_output=attribute_output,
                                                                                                                     keyword_input=keyword_input, 
                                                                                                                     example_input=example_input,
                                                                                                                     )
-                disagreement_df_temp.loc[:,f"Event_Name_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['event'])
-                disagreement_df_temp.loc[:,f"Attribute_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['attributes'])
-                disagreement_df_temp.loc[:,f"Text_Quote_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['text_quotes'])
-                disagreement_df_temp.loc[:,f"Order_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = disagreement_df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['orders'])                
-                disagreement_df_temp.to_excel(f"../exports/05_llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.xlsx", index=False)
-                disagreement_df_temp.to_pickle(f"../exports/05_llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.pkl")
+                df_temp.loc[:,f"Event_Name_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['event'])
+                df_temp.loc[:,f"Attribute_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['attributes'])
+                df_temp.loc[:,f"Text_Quote_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['text_quotes'])
+                df_temp.loc[:,f"Order_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['orders'])                
+                df_temp.to_excel(f"../exports/05_llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.xlsx", index=False)
+                df_temp.to_pickle(f"../exports/05_llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.pkl")
                 
