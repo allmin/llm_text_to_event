@@ -71,11 +71,11 @@ llm_type="lambda3.1:70b"
 for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:    
     for attribute_output in attribute_output_raw:
         os.makedirs(f"../exports/05_llm_{llm_type}_{dataset}/{ET}", exist_ok=True)
-        for analysis_type in ['Sent', 'Doc'][-1:]:
+        for analysis_type in ['Sent', 'Doc']:
             if analysis_type == 'Sent':
-                uid = 'UID'
+                id_type = 'UID'
             elif analysis_type == 'Doc':
-                uid = 'ROW_ID'
+                id_type = 'ROW_ID'
             try:
                 file = glob(f"../exports/04_groundtruth/{dataset}/Generated/{ET}*{analysis_type}*.pkl")[0]
             except:
@@ -83,16 +83,21 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
                 continue
             file_name = os.path.basename(file).strip(".pkl")
             df = pd.read_pickle(file)
+            df[id_type] = df[id_type].astype(str)
             print(analysis_type, len(df))
-            df = df[df[uid].astype(str).isin(focus_ids[analysis_type])]
+            df = df[df[id_type].isin(focus_ids[analysis_type])]
             print(analysis_type, len(df))
             df['Event_Name'] = [tuple(i) for i in df['Event_Name']]
             df['Keyword'] = [tuple(i) for i in df['Keyword']]
             if analysis_type == 'Sent':
                 df_temp = df.copy()
+                focus_type = "Sentences"
+                gt_column = f"Sent_gt_{ET}"
                 input_to_analyse = df_temp.Sentence.tolist()
             elif analysis_type == 'Doc':
                 df_temp = df.copy()
+                focus_type = "Documents"
+                gt_column = f"Sent_gt_{ET}"
                 input_to_analyse = df_temp.Document.tolist()
             print(f"Event Type: {ET} | Rows: {len(df_temp)} | Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | File: {file_name}")
             print(f'attribute_output:{attribute_output}, Time Start: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
@@ -112,7 +117,11 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
                 df_temp.loc[:,f"Event_Name_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['event'])
                 df_temp.loc[:,f"Attribute_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['attributes'])
                 df_temp.loc[:,f"Text_Quote_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['text_quotes'])
-                df_temp.loc[:,f"Order_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['orders'])                
+                df_temp.loc[:,f"Order_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['orders'])      
+                gt_file = f"../exports/04_groundtruth/P-SET/Annotated/{ET}_{focus_type}.pkl"
+                if os.path.exists(gt_file):
+                    gt_df = pd.read_pickle(gt_file) 
+                    id_to_gt = {str(row[id_type]):row[gt_column] for _,row in gt_df.iterrows()}       
                 df_temp.to_excel(f"../exports/05_llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.xlsx", index=False)
                 df_temp.to_pickle(f"../exports/05_llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.pkl")
                 
