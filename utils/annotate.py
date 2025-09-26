@@ -41,6 +41,9 @@ def load_data(path):
     df.index = range(len(df))
     return df
 
+def save_data_final(df):
+    global FILE_PATH
+    df.to_pickle(FILE_PATH.replace("Annotating","Annotated"))
 
 def save_data(df):
     global FILE_PATH
@@ -199,3 +202,6 @@ with col3:
     if st.button("Next ➡️") and st.session_state.page_number < total_pages:
         st.session_state.page_number += 1
         st.rerun()
+        
+        
+st.button("Finalize Annotation",on_click=lambda: save_data_final(df))

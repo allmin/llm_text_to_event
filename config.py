@@ -1,11 +1,5 @@
 llm_type = "llama3.1:70b"
 event_types = ["Pain", "Sleep", "Excretion", "Eating", "Family"]
-# event_description_dict_embedder = {"Eating":"To take food into the body by mouth",
-#                               "Excretion":"Waste matter discharged from the body s feces or urine",
-#                               "Family":"A visit, call or communication with a member of the family", #Interaction with a family member
-#                               "Pain":"The reporting of pain or an observation of pain signals by the doctor/nurse",
-#                               "Sleep":"The act of sleeping, possibly mentioning its quality or quantity"}
-
 event_description_dict_llm = {
                             "Eating": "The patient takes food into their body by mouth. Identifed Always",
                             "Excretion": "The patient discharges waste matter from their body. Identifed Always",
@@ -13,46 +7,87 @@ event_description_dict_llm = {
                             "Pain": "The patient reports or shows signs of pain. Identifed Always",
                             "Sleep": "The patient sleeps or the sleep’s quality or quantity is described. Identifed Always."
                             }
-
 event_description_dict_embedder = event_description_dict_llm
 
-common_attributes = {"negation": "<boolean> # true if the event is negated, false otherwise",
-                     "time": "<string> # e.g., 2 am, 5 pm, night, evening etc.",
-                     "caused_by": "<string> # e.g., medication, treatment, etc.",
-                     }
 
-event_attributes_dict_llm = {
-                                "Eating": {
-                                    "food": "<string> # e.g., pancakes, porridge, etc.",
-                                    "amount": "<string> # e.g., 1, 2 bowls, etc.",
-                                    "method": "<string>  # e.g., oral, tube, etc."
-                                },
-                                "Excretion": {
-                                    "type": "<string> # e.g., urine, stool, etc.",
-                                    "frequency": "<string> # e.g., 2x, once, etc.",
-                                    "quality": "<string> # e.g., loose, hard, etc."
-                                },
-                                "Family": {
-                                    "interaction": "<string> # e.g., visit, call, communication, etc.",  
-                                    "relation": "<string> # e.g., mother, son, etc."
-                                },
-                                "Pain": {
-                                    "severity": "<string> # e.g., mild, moderate, severe, numeric scale if present, etc.",
-                                    "location": "<string> # e.g., right knee, head, etc.",
-                                    "duration": "<string> # e.g., all night, 3 hours, etc.",
-                                },
-                                "Sleep": {
-                                    "quality": "<string> # e.g., good, poor, restless, etc.",   
-                                    "duration": "<string> # e.g., 6 hours, phrases like \"all night\", etc."   
+def get_general_prompt_template(text, predefined_event_names, event_w_description, attribute_output, keyword_input, example_input, detected_keywords):
+    task_description = get_task_description(attribute_output,keyword_input)
+    classification_rules = get_classification_rules(attribute_output)
+    event_attributes_dict_llm = get_event_attributes_dict()
+    attribute_description = get_attribute_clause(event_attributes_dict_llm)
+    keyword_evidence = get_keyword_clause(detected_keywords)
+    output_format = get_output_format(predefined_event_names, attribute_output)
+    output_rules = get_output_rules(attribute_output)
+    examples = get_examples(attribute_output)
+    general_prompt_template = f"""Given the text: {text}, 
+                            and the following event types with their definitions: {event_w_description} 
+                            ---
+                            Your task:
+                            {task_description}
+                            ---
+                            Classification Rules:
+                            {classification_rules}
+                            {attribute_description if attribute_output else ""}
+                            {keyword_evidence if keyword_input else ""}
+                            ---
+                            Output Schema (strict):
+                            {output_format}
+                            {output_rules}
+                            {examples if example_input else ""}
+                            """
+    return general_prompt_template
+
+def get_event_attributes_dict():
+    event_attributes_dict_llm = {
+                                    "Eating": {
+                                        "food": "<string> # e.g., pancakes, porridge, etc.",
+                                        "amount": "<string> # e.g., 1, 2 bowls, etc.",
+                                        "method": "<string>  # e.g., oral, tube, etc."
+                                    },
+                                    "Excretion": {
+                                        "type": "<string> # e.g., urine, stool, etc.",
+                                        "frequency": "<string> # e.g., 2x, once, etc.",
+                                        "quality": "<string> # e.g., loose, hard, etc."
+                                    },
+                                    "Family": {
+                                        "interaction": "<string> # e.g., visit, call, communication, etc.",  
+                                        "relation": "<string> # e.g., mother, son, etc."
+                                    },
+                                    "Pain": {
+                                        "severity": "<string> # e.g., mild, moderate, severe, numeric scale if present, etc.",
+                                        "location": "<string> # e.g., right knee, head, etc.",
+                                        "duration": "<string> # e.g., all night, 3 hours, etc.",
+                                    },
+                                    "Sleep": {
+                                        "quality": "<string> # e.g., good, poor, restless, etc.",   
+                                        "duration": "<string> # e.g., 6 hours, phrases like \"all night\", etc."   
+                                    }
                                 }
-                            }
+    common_attributes = {"negation": "<boolean> # true if the event is negated, false otherwise",
+                        "time": "<string> # e.g., 2 am, 5 pm, night, evening etc.",
+                        "caused_by": "<string> # e.g., medication, treatment, etc.",
+                        }
 
-for et in event_types:
-    event_attributes_dict_llm[et].update(common_attributes)
+    for et in event_types:
+        event_attributes_dict_llm[et].update(common_attributes)
+    
+    return event_attributes_dict_llm 
+    
+def get_attribute_clause(attribute_description_dict):
+    f"""---
+        Attributes allowed:
+        {attribute_description_dict}
+        If no relevant attribute exists for an event, return an empty object {{}}.
+        """
 
+def get_keyword_clause(detected_keywords):
+    return f"""---
+        Keyword evidence (Ki):
+        Additional facts: A keyword matching algorithm without context detected keyword(s) {detected_keywords}.
+        Use this only as a pointer. If context contradicts, ignore."""
 
-
-examples = """
+def get_examples(attribute_output):
+    examples_base = """
                 ---
                 Examples:
                 
@@ -137,8 +172,7 @@ examples = """
                 "order":[]
                 }
                 """
-
-examples_Ao = """
+    examples_Ao = """
                 ---
                 Examples:
                 
@@ -275,3 +309,64 @@ examples_Ao = """
                 "order":[["e1", "before", "e2"]]
                 }
                 """
+    if attribute_output:
+        return examples_Ao
+    else:
+        return examples_base
+
+def get_task_description(attribute_output, keyword_input):
+    task_description = []
+    task_description.append("Identify ALL events in the text (zero, one, or more).")
+    task_description.append("For each event, assign an event_type from the list above.")
+    task_description.append("If multiple event of same type is mentioned, assign the event_type multiple times")
+    if attribute_output:
+        task_description.append("Extract attributes for each event using ONLY the allowed attributes listed below.")
+    if keyword_input:
+        task_description.append("Use keyword evidence (Ki) ONLY if it is consistent with the text context.")
+    task_description.append("Output strictly valid JSON following the schema below.")
+    task_description = "\n".join([f"{i}. {task}" for i,task in enumerate(task_description)])
+    return task_description
+                
+def get_classification_rules(attribute_output):
+    classification_rules = []
+    classification_rules.append("- A text may contain multiple events, either of the same type or of different types.")
+    classification_rules.append("- Create a separate event object for each event mention.")
+    classification_rules.append("- Do not extract events that are explicitly NEGATED (e.g., \"denies pain\", \"couldn\'t sleep\") unless the event is marked as \"Identifed Always\".")
+    if attribute_output:
+        classification_rules.append("- If a NEGATED event is marked as Identified Always, extract it and set the negation attribute to true.")
+    classification_rules.append("- Ignore events that refer to FUTURE or HYPOTHETICAL scenarios (e.g., \"will eat tomorrow\").")
+    classification_rules.append("- A valid event must have occurred in the recent past or be occurring at the time of writing.")
+    classification_rules.append("- If no events are found, or if uncertain, return: {\"events\": []}")
+    classification_rules = "\n".join(classification_rules)
+    return classification_rules
+
+def get_output_format(predefined_event_names, attribute_output):
+    output_format = f"""{{
+                            "events": [
+                                {{
+                                "event_id": "< A unique id eg.: e1 | e2 |...>"
+                                "event_type": "<{" | ".join(predefined_event_names)}>",
+                                "text_quote": "<fragement from the text indicating the event_type>"{""",
+                    "attributes": {
+                        "<attribute_name>": "<attribute_value>"
+                    }""" if attribute_output else ""}
+                                }}
+                            ],
+                            "order": [
+                                ["e1", "before" | "after" | "simultaneous", "e2" ]
+                            ]
+                            }}"""  
+    return output_format
+
+def get_output_rules(attribute_output):
+    return f"""
+                Rules:
+                    - Ensure the output is valid JSON (parseable).
+                    - "eventS" must always be an array (can be empty).
+                    - Multiple instances of the same event type appear with different ids.
+                    - Events appear in the array in the same order in which they appear in the text.
+                    - Their partial orders can be expressed using the "order" section.
+                    - Do not include extra keys, comments, or text.
+                    {'- Each object in "events" must contain "event_type", "text_quote", and "attributes".' if attribute_output else '- Each object in "events" must contain "event_type" and "text_quote".' }
+                    {'- If an event attribute type has no value mentioned, return "attributes": {"< attribute name >:Unknown"} for each attribute type defined for the event type' if attribute_output else ''} 
+            """

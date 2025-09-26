@@ -11,9 +11,11 @@ from itertools import product
 import time
 from tqdm import tqdm
 
+
 parent_dir = os.path.abspath(os.path.join(os.getcwd(), '..'))
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
+import config
 
 class EventExtractor:
     def __init__(self, is_event_model_type=None, event_name_model_type=None, attribute_model_type=None, dictionary_file=None, llm_type=None):
@@ -29,7 +31,6 @@ class EventExtractor:
         elif event_name_model_type == "dictionary":
             if not dictionary_file:
                 dictionary_file = "../resources/keyword_dict_annotated.xlsx"
-
             self.dictionary_input_df = pd.read_excel(dictionary_file)
             self.lemma_data = self.get_lemma_data() #['lemma', 'all_forms']
             self.dictionary_positive_lemmas = {lemma_keyword:event_type for keyword,event_type,positive in zip(self.dictionary_input_df['label'], self.dictionary_input_df['class'], self.dictionary_input_df['positive']) if positive==1 for lemma_keyword in self.lemmatize_keyword(keyword)}
@@ -92,7 +93,7 @@ class EventExtractor:
         return combinations
     
     def extract_events(self, texts, event_names, event_descriptions=None, threshold=0.2, 
-                       attribute_description_dict = None, examples="", attribute_output=False,
+                       attribute_output=False,
                        prompt_evidence={'keywords':[],'event_names':[],'similarities':[]},
                        keyword_output=False, phrase_output=False, 
                        keyword_input=False, embedder_input=False,
@@ -102,8 +103,6 @@ class EventExtractor:
         self.embedder_method=embedder_method
         self.texts = texts
         self.event_descriptions = event_descriptions
-        self.examples = examples
-        self.attribute_description_dict = attribute_description_dict
         self.similarities_dict = [{}]*len(self.texts)
         self.attributes = [""]*len(self.texts)
         self.orders = [""]*len(self.texts)
@@ -418,58 +417,7 @@ class EventExtractor:
                 self.is_event_cache[text]=is_event
                 self.is_events.append(is_event)
     
-    def get_evidence(self,ind=None):
-        if ind < len(self.prompt_evidence["keywords"]):
-            keyword_evidence = self.prompt_evidence["keywords"][ind]
-            event_evidence= self.prompt_evidence["event_names"][ind]
-            similarities = self.prompt_evidence["similarities"][ind]
-            similarities = {k:f"{v:0.2f}" for (k,v) in similarities.items()}
-        additional_facts_clause = "\n You may consider the additional facts if they are reasonable. Ignore otherwise."
-        if self.keyword_input==False and self.embedder_input==False:
-            evidence = ""
-        elif self.keyword_input==True and self.embedder_input==False:
-            evidence = f"""Additional facts:
-            A keyword matching algorithm without context, detected keyword(s): {keyword_evidence}
-            and assigned event type: {event_evidence}.""" + additional_facts_clause
-        elif self.keyword_input==False and self.embedder_input==True:
-            evidence = f"""Additional facts:
-            A text embedder, assigned following similarity score to  
-            each of the event type labels: {similarities}.""" + additional_facts_clause
-        elif self.keyword_input==True and self.embedder_input==True:
-            evidence = f"""Additional facts:
-            A keyword matching algorithm without context, detected keyword(s): {keyword_evidence}
-            and assigned event type: {event_evidence}
-            A text embedder, assigned following similarity score to  
-            each of the event type labels: {similarities}.""" + additional_facts_clause       
-        return evidence 
     
-    def get_task_description(self):
-        task_description = []
-        task_description.append("Identify ALL events in the text (zero, one, or more).")
-        task_description.append("For each event, assign an event_type from the list above.")
-        task_description.append("If multiple event of same type is mentioned, assign the event_type multiple times")
-        if self.attribute_output:
-            task_description.append("Extract attributes for each event using ONLY the allowed attributes listed below.")
-        if self.keyword_input:
-            task_description.append("Use keyword evidence (Ki) ONLY if it is consistent with the text context.")
-        task_description.append("Output strictly valid JSON following the schema below.")
-        task_description = "\n".join([f"{i}. {task}" for i,task in enumerate(task_description)])
-        return task_description
-    
-    def get_classification_results(self):
-        classification_rules = []
-        classification_rules.append("- A text may contain multiple events, either of the same type or of different types.")
-        classification_rules.append("- Create a separate event object for each event mention.")
-        classification_rules.append("- Do not extract events that are explicitly NEGATED (e.g., \"denies pain\", \"couldn\'t sleep\") unless the event is marked as \"Identifed Always\".")
-        if self.attribute_output:
-            classification_rules.append("- If a NEGATED event is marked as Identified Always, extract it and set the negation attribute to true.")
-
-        classification_rules.append("- Ignore events that refer to FUTURE or HYPOTHETICAL scenarios (e.g., \"will eat tomorrow\").")
-        classification_rules.append("- A valid event must have occurred in the recent past or be occurring at the time of writing.")
-        classification_rules.append("- If no events are found, or if uncertain, return: {\"events\": []}")
-        classification_rules = "\n".join(classification_rules)
-        return classification_rules
-
     def extract_event_names_llama(self):
         self.event_detection_time = []
         self.predicted_events = []
@@ -488,66 +436,8 @@ class EventExtractor:
             else:
                 event_w_description = self.predefined_event_names_w_unknown
             event_w_description = "\n".join([f"{k} : {v}" for (k,v) in event_w_description.items()]) if type(event_w_description)==dict else event_w_description
-            task_description = self.get_task_description()
-            classification_rules = self.get_classification_results()
-            attribute_description_dict = self.attribute_description_dict
             detected_keywords = self.prompt_evidence['keywords'][ind] if ind < len(self.prompt_evidence['keywords']) else []
-            attribute_description = f"""---
-                                    Attributes allowed:
-                                    {attribute_description_dict}
-                                    If no relevant attribute exists for an event, return an empty object {{}}.
-                                    """
-            keyword_evidence = f"""---
-                                    Keyword evidence (Ki):
-                                    Additional facts: A keyword matching algorithm without context detected keyword(s) {detected_keywords}.
-                                    Use this only as a pointer. If context contradicts, ignore."""
-            extra_json = """,
-                "attributes": {
-                    "<attribute_name>": "<attribute_value>"
-                }""" if self.attribute_output else ""
-            output_format = f"""{{
-                                    "events": [
-                                        {{
-                                        "event_id": "< A unique id eg.: e1 | e2 |...>"
-                                        "event_type": "<{" | ".join(self.predefined_event_names)}>",
-                                        "text_quote": "<fragement from the text indicating the event_type>"{extra_json}
-                                        }}
-                                    ],
-                                    "order": [
-                                        ["e1", "before" | "after" | "simultaneous", "e2" ]
-                                    ]
-                                    }}"""                     
-            output_rules = f"""
-                            Rules:
-                                - Ensure the output is valid JSON (parseable).
-                                - "eventS" must always be an array (can be empty).
-                                - Multiple instances of the same event type appear with different ids.
-                                - Events appear in the array in the same order in which they appear in the text.
-                                - Their partial orders can be expressed using the "order" section.
-                                - Do not include extra keys, comments, or text.
-                                {'- Each object in "events" must contain "event_type", "text_quote", and "attributes".' if self.attribute_output else '- Each object in "events" must contain "event_type" and "text_quote".' }
-                                {'- If an event attribute type has no value mentioned, return "attributes": {"< attribute name >:Unknown"} for each attribute type defined for the event type' if self.attribute_output else ''} 
-                        """
-            examples = self.examples
-            prompt = f"""Given the text: {text}, 
-                        and the following event types with their definitions: {event_w_description} 
-                        ---
-                        Your task:
-                        {task_description}
-                        ---
-                        Classification Rules:
-                        {classification_rules}
-                        
-                        {attribute_description if self.attribute_output else ""}
-                        
-                        {keyword_evidence if self.keyword_input else ""}
-                        ---
-                        Output Schema (strict):
-                        {output_format}
-                        {output_rules}
-                        
-                        {examples if self.example_input else ""}
-                        """
+            prompt = config.get_general_prompt_template((text, self.predefined_event_names_w_unknown, event_w_description, self.attribute_output, self.keyword_input, self.example_input, detected_keywords))
             if text in self.event_name_cache:
                 used_cache = True
                 self.predicted_events.append(self.event_name_cache[text])
@@ -649,17 +539,14 @@ if __name__ == "__main__":
     print("BIOLORD_events:",[i['Sleep'] for i in BIOLORD.similarities_dict])
 
 
-    from config import event_description_dict_llm, event_attributes_dict_llm, examples, examples_Ao
+    
     LLAMA2 = EventExtractor(event_name_model_type='llm', attribute_model_type='None',llm_type = "llama3.1:70b")   
-    attribute_output = True
     LLAMA2.extract_events(texts=mtexts, event_names=mevent_names, 
-                                event_descriptions=event_description_dict_llm,
+                                event_descriptions=config.event_description_dict_llm,
                                 prompt_evidence={'keywords':DICT.keywords, 
                                                  'event_names':DICT.predicted_events, 
                                                  'similarities':BIOLORD.similarities_dict},
-                                examples=examples_Ao if attribute_output else examples,
-                                attribute_description_dict=event_attributes_dict_llm,
-                                attribute_output=attribute_output, 
+                                attribute_output=True, 
                                 keyword_input=True, example_input=True,)
     print("LLAMA_all_evidence_events:",LLAMA2.event_list[0]["attributes"], 
           LLAMA2.event_list[0]["text_quotes"],
