@@ -383,17 +383,10 @@ def get_output_format(predefined_event_names, attribute_output, prompt_version):
                                 ]
                                 }}"""  
     elif prompt_version == 2:
-        output_format = """
-                    {    
-                    "events": [ 
-                        { 
-                        "event_id": string, ("e1", "e2", etc.)
-                        "event_type": string ("Sleep", "Excretion", "Eating", "Family", "Pain", "Unknown"), 
-                        "text_quote": string (fragment of the text from which attributes are extracted), 
-                        "negation": boolean, (true if the event is negated e.g., did not sleep. false otherwise)
-                        "time": string (e.g., am, morning, 5pm . default: "Unknown"), 
-                        "caused_by": string (name of another event that caused this event. default: "Unknown"), 
-                        "attributes": { 
+        attribute_specs = ""
+        if attribute_output:
+            attribute_specs = """
+            "attributes": { 
                             // event-specific attributes 
                             "Sleep": { 
                             "quality": string (e.g., poor, good, etc.),
@@ -417,7 +410,18 @@ def get_output_format(predefined_event_names, attribute_output, prompt_version):
                             "food": string, (e.g., pancakes, porridge, etc.)
                             "amount": string, (e.g., 1, 2 bowls, etc.)
                             "method": string (e.g., oral, tube, etc.)
-                            } 
+                            }"""
+        output_format = """
+                    {    
+                    "events": [ 
+                        { 
+                        "event_id": string, ("e1", "e2", etc.)
+                        "event_type": string ("Sleep", "Excretion", "Eating", "Family", "Pain", "Unknown"), 
+                        "text_quote": string (fragment of the text from which attributes are extracted), 
+                        "negation": boolean, (true if the event is negated e.g., did not sleep. false otherwise)
+                        "time": string (e.g., am, morning, 5pm . default: "Unknown"), 
+                        "caused_by": string (name of another event that caused this event. default: "Unknown"), 
+                        """ + attribute_specs + """ 
                         } 
                         } 
                     ], 
