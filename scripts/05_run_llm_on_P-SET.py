@@ -16,7 +16,7 @@ if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 from utils.event_extractor import EventExtractor
 from utils.evaluation_samples import focus_ids
-from config import event_types, event_description_dict_llm
+from config import event_types, event_descriptions
 import argparse
 
 
@@ -49,7 +49,7 @@ parser.add_argument(
     '--attribute_output',
     type=str,
     choices=['True', 'False', 'All'],
-    default='False',
+    default='True',
     help="Choose between 'True', 'False', or 'All'"
 )
 
@@ -65,12 +65,12 @@ elif value == 'All':
     attribute_output_raw = [True, False]
 print(f'attribute_output:{attribute_output_raw}, type:{type(attribute_output_raw)}')
 dataset = 'P-SET'
-
-
-llm_type="lambda3.1:70b"
+prompt_version = 2
+llm_type="llama3.1:70b"
 for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:    
+    output_folder = f"../exports/05_llm_{llm_type}_{dataset}_v{prompt_version}/{ET}"
     for attribute_output in attribute_output_raw:
-        os.makedirs(f"../exports/05_llm_{llm_type}_{dataset}/{ET}", exist_ok=True)
+        os.makedirs(f"{output_folder}", exist_ok=True)
         for analysis_type in ['Sent', 'Doc']:
             if analysis_type == 'Sent':
                 id_type = 'UID'
@@ -97,7 +97,7 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
             elif analysis_type == 'Doc':
                 df_temp = df.copy()
                 focus_type = "Documents"
-                gt_column = f"Sent_gt_{ET}"
+                gt_column = f"Doc_gt_{ET}"
                 input_to_analyse = df_temp.Document.tolist()
             print(f"Event Type: {ET} | Rows: {len(df_temp)} | Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | File: {file_name}")
             print(f'attribute_output:{attribute_output}, Time Start: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
@@ -108,7 +108,8 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
                 event_extractor_object = EventExtractor(event_name_model_type="llm",attribute_model_type="None",llm_type=llm_type)
                 df_temp.loc[:,f"LLM_Events_{col_suffix}_evidence_{analysis_type}"] = event_extractor_object.extract_events(texts=input_to_analyse, 
                                                                                                                     event_names=event_types, 
-                                                                                                                    event_descriptions=event_description_dict_llm, 
+                                                                                                                    event_descriptions=event_descriptions, 
+                                                                                                                    prompt_version=prompt_version,
                                                                                                                     prompt_evidence=evidence, 
                                                                                                                     attribute_output=attribute_output,
                                                                                                                     keyword_input=keyword_input, 
@@ -117,11 +118,15 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
                 df_temp.loc[:,f"Event_Name_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['event'])
                 df_temp.loc[:,f"Attribute_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['attributes'])
                 df_temp.loc[:,f"Text_Quote_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['text_quotes'])
+                df_temp.loc[:,f"Negation_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['negation'])
+                df_temp.loc[:,f"Caused_By_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['caused_by'])
+                df_temp.loc[:,f"Event_Time_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['event_time'])
                 df_temp.loc[:,f"Order_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['orders'])      
                 gt_file = f"../exports/04_groundtruth/P-SET/Annotated/{ET}_{focus_type}.pkl"
                 if os.path.exists(gt_file):
                     gt_df = pd.read_pickle(gt_file) 
-                    id_to_gt = {str(row[id_type]):row[gt_column] for _,row in gt_df.iterrows()}       
-                df_temp.to_excel(f"../exports/05_llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.xlsx", index=False)
-                df_temp.to_pickle(f"../exports/05_llm_{llm_type}_{dataset}/{ET}/{file_name}_att_{attribute_output}.pkl")
+                    id_to_gt = {str(row[id_type]):row[gt_column] for _,row in gt_df.iterrows()}     
+                    df_temp[gt_column] = df_temp[id_type].map(id_to_gt)  
+                df_temp.to_excel(f"{output_folder}/{file_name}_att_{attribute_output}.xlsx", index=False)
+                df_temp.to_pickle(f"{output_folder}/{file_name}_att_{attribute_output}.pkl")
                 

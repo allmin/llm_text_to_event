@@ -27,7 +27,7 @@ import utils.event_extractor  # your module
 import glob, os
 importlib.reload(utils.event_extractor)
 from utils.event_extractor import EventExtractor  # re-import your class if needed
-from config import event_types, event_description_dict_embedder, event_description_dict_llm
+from config import event_types, event_description_dict_embedder, event_descriptions
 suffix = "7_14_days"
 version = 2
 report_counter = 0
