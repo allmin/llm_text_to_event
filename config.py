@@ -53,7 +53,7 @@ def get_general_prompt_template(text, predefined_event_names, event_w_descriptio
         general_prompt_template = f"""
         **Classification and Attribute Extraction Task** 
             Classify the following sentence into events that took place DURING THE SHIFT in which this note was written, 
-            using one or more of the following categories: {predefined_event_names}. 
+            using one or more of the following categories: {event_w_description}. 
             {classification_rules}
             For each detected event, output strictly valid JSON following the schema below: 
             ```
@@ -379,6 +379,10 @@ def get_classification_rules(attribute_output, prompt_version):
         classification_rules.append("If the event talks about a patient's history or future wish of an event, DO NOT EXTRACT that event.")
         classification_rules.append("Consider events only if they relate to the patient themselves (e.g., exclude caregivers or family members' own experiences).")
         classification_rules = " ".join(classification_rules)
+    elif prompt_version == 3:
+        classification_rules.append("If the event talks about a patient's history (before the shift) or future plan of an event (after the shift), DO NOT EXTRACT that event.")
+        classification_rules.append("Consider events only if they relate to the patient themselves (e.g., exclude events experienced by family members).")
+        classification_rules = " ".join(classification_rules)
     return classification_rules
 
 def get_output_format(predefined_event_names, attribute_output, prompt_version):
@@ -398,7 +402,7 @@ def get_output_format(predefined_event_names, attribute_output, prompt_version):
                                     ["e1", "before" | "after" | "simultaneous", "e2" ]
                                 ]
                                 }}"""  
-    elif prompt_version == 2:
+    elif prompt_version in [2,3]:
         attribute_specs = ""
         if attribute_output:
             attribute_specs = """
@@ -466,7 +470,7 @@ def get_output_rules(attribute_output, prompt_version):
                         {'- Each object in "events" must contain "event_type", "text_quote", and "attributes".' if attribute_output else '- Each object in "events" must contain "event_type" and "text_quote".' }
                         {'- If an event attribute type has no value mentioned, return "attributes": {"< attribute name >:Unknown"} for each attribute type defined for the event type' if attribute_output else ''} 
                 """
-    elif prompt_version == 2:
+    elif prompt_version in [2,3]:
         output_rules = f"""
                         **Negation Policy:** 
                         * For events like Sleep, Pain, Excretion, and Eating, the event is recorded in the output even if it is negated 
