@@ -381,7 +381,7 @@ def get_classification_rules(attribute_output, prompt_version):
         classification_rules = " ".join(classification_rules)
     elif prompt_version == 3:
         classification_rules.append("If the event talks about a patient's history (before the shift) or future plan of an event (after the shift), DO NOT EXTRACT that event.")
-        classification_rules.append("Consider events only if they relate to the patient themselves (e.g., exclude events experienced by family members).")
+        classification_rules.append("Consider events ONLY if they relate to the patient (e.g., exclude caregivers' or family members' own experiences of Sleep/Excretion/Pain/Eating/Family).")
         classification_rules = " ".join(classification_rules)
     return classification_rules
 
@@ -407,7 +407,7 @@ def get_output_format(predefined_event_names, attribute_output, prompt_version):
         if attribute_output:
             attribute_specs = """
             "attributes": { 
-                            // event-specific attributes 
+                            // Only extract attributes for events present in the text:
                             "Sleep": { 
                             "quality": string (e.g., poor, good, etc.),
                             "duration": string (e.g., short, on and off, etc.),

@@ -479,6 +479,7 @@ class EventExtractor:
                 if self.json_response:
                     try:
                         event = json.loads(self.json_response)
+                        print(text,event)
                         event_id = []
                         event_name = []
                         attributes = []
@@ -581,6 +582,7 @@ if __name__ == "__main__":
                                 prompt_version=3,
                                 prompt_evidence={'keywords':DICT.keywords, 
                                                  'event_names':DICT.predicted_events, 
+                                                 'dct':[(23,45)]
                                                 },
                                 attribute_output=True, 
                                 keyword_input=True, example_input=True,)
