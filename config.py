@@ -9,7 +9,7 @@ event_descriptions = {"Eating": "The patient takes food into their body by mouth
 event_description_dict_embedder = event_descriptions
 
 
-def get_general_prompt_template(text, predefined_event_names, event_w_description, prompt_version, attribute_output, keyword_input, example_input, detected_keywords):
+def get_general_prompt_template(text, predefined_event_names, event_w_description, prompt_version, attribute_output, keyword_input, example_input, detected_keywords, dct):
     task_description = get_task_description(attribute_output,keyword_input)
     classification_rules = get_classification_rules(attribute_output,prompt_version)
     event_attributes_dict_llm = get_event_attributes_dict()
@@ -48,7 +48,23 @@ def get_general_prompt_template(text, predefined_event_names, event_w_descriptio
            {output_rules}
            The text:
            {text}
-"""
+        """
+    elif prompt_version == 3:
+        general_prompt_template = f"""
+        **Classification and Attribute Extraction Task** 
+            Classify the following sentence into events that took place DURING THE SHIFT in which this note was written, 
+            using one or more of the following categories: {predefined_event_names}. 
+            {classification_rules}
+            For each detected event, output strictly valid JSON following the schema below: 
+            ```
+           {output_format}  
+           ```
+           {output_rules}
+           ---
+           Text written between: {dct[0]} and {dct[1]}
+           Text:
+           {text}
+        """
         
         
     return general_prompt_template

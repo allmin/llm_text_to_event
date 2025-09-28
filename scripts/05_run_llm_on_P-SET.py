@@ -81,27 +81,45 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
             except:
                 print(f"No file found for {ET}")
                 continue
+
+            df_date=pd.read_pickle("../exports/04_dictionary_features.pkl")
+            df_date[id_type] = df_date[id_type].astype("str")
+            df_date['CHARTTIME'] = pd.to_datetime(df_date['CHARTTIME'])
+            df_date['STORETIME'] = pd.to_datetime(df_date['STORETIME'])
+            df_date['TIME_DIFF'] = df_date['STORETIME'] - df_date['CHARTTIME']
+            df_date['TIME_DIFF_min'] = df_date['TIME_DIFF'].dt.total_seconds() / 60
+            df_date['TIME_DIFF_min'].hist(bins=100)
+            id_to_charttime = df_date.groupby(id_type)["CHARTTIME"].min().to_dict()
+            id_to_storetime = df_date.groupby(id_type)["STORETIME"].max().to_dict()
+            
             file_name = os.path.basename(file).strip(".pkl")
             df = pd.read_pickle(file)
             df[id_type] = df[id_type].astype(str)
+            df['Event_Name'] = [tuple(i) for i in df['Event_Name']]
+            df['Keyword'] = [tuple(i) for i in df['Keyword']]
+            df['CHARTTIME'] = df[id_type].map(id_to_charttime)
+            df['STORETIME'] = df[id_type].map(id_to_storetime)
+            df['DCT'] = [(r['CHARTTIME'], r['STORETIME']) for _,r in df.iterrows()]
+            print(f"------------{df.STORETIME-df.CHARTTIME}")
             print(analysis_type, len(df))
             df = df[df[id_type].isin(focus_ids[analysis_type])]
             print(analysis_type, len(df))
-            df['Event_Name'] = [tuple(i) for i in df['Event_Name']]
-            df['Keyword'] = [tuple(i) for i in df['Keyword']]
             if analysis_type == 'Sent':
                 df_temp = df.copy()
                 focus_type = "Sentences"
                 gt_column = f"Sent_gt_{ET}"
                 input_to_analyse = df_temp.Sentence.tolist()
+                
+                
             elif analysis_type == 'Doc':
                 df_temp = df.copy()
                 focus_type = "Documents"
                 gt_column = f"Doc_gt_{ET}"
                 input_to_analyse = df_temp.Document.tolist()
+            
             print(f"Event Type: {ET} | Rows: {len(df_temp)} | Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | File: {file_name}")
             print(f'attribute_output:{attribute_output}, Time Start: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
-            evidence={'keywords':df_temp.Keyword.tolist(), 'event_names':df_temp.Event_Name.tolist(), }
+            evidence={'keywords':df_temp.Keyword.tolist(), 'event_names':df_temp.Event_Name.tolist(), 'dct':df_temp.DCT.tolist()}
             for keyword_input, example_input in [i for i in product([True],[True])]:
                 print(f"keyword_input:{keyword_input}, example_input:{example_input}, attribute_output:{attribute_output}, analysis_type:{analysis_type}")
                 col_suffix = get_col_suffix(keyword_input, example_input)

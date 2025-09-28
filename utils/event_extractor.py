@@ -455,12 +455,14 @@ class EventExtractor:
                 event_w_description = self.predefined_event_names_w_unknown
             event_w_description = "\n".join([f"{k} : {v}" for (k,v) in event_w_description.items()]) if type(event_w_description)==dict else event_w_description
             detected_keywords = self.prompt_evidence['keywords'][ind] if ind < len(self.prompt_evidence['keywords']) else []
+            dct = self.prompt_evidence['dct'][ind] if ind < len(self.prompt_evidence['dct']) else []
             prompt = config.get_general_prompt_template(text=text, predefined_event_names=self.predefined_event_names_w_unknown, 
                                                         prompt_version=self.prompt_version,                                                        event_w_description=event_w_description, 
                                                         attribute_output=self.attribute_output, 
                                                         keyword_input=self.keyword_input, 
                                                         example_input=self.example_input, 
-                                                        detected_keywords=detected_keywords)
+                                                        detected_keywords=detected_keywords,
+                                                        dct=dct)
             if text in self.event_name_cache:
                 used_cache = True
                 self.predicted_events.append(self.event_name_cache[text])
@@ -576,7 +578,7 @@ if __name__ == "__main__":
     LLAMA2 = EventExtractor(event_name_model_type='llm', attribute_model_type='None',llm_type = "llama3.1:70b")   
     LLAMA2.extract_events(texts=mtexts, event_names=mevent_names, 
                                 event_descriptions=config.event_descriptions,
-                                prompt_version=2,
+                                prompt_version=3,
                                 prompt_evidence={'keywords':DICT.keywords, 
                                                  'event_names':DICT.predicted_events, 
                                                 },
