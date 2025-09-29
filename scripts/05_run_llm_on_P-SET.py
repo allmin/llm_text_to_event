@@ -132,6 +132,7 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
                                                                                                                     keyword_input=keyword_input, 
                                                                                                                     example_input=example_input,
                                                                                                                     )
+                df_temp.loc[:,f"Raw_Output_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['raw_output'])
                 df_temp.loc[:,f"Event_Name_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['event'])
                 df_temp.loc[:,f"Attribute_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['attributes'])
                 df_temp.loc[:,f"Text_Quote_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['text_quotes'])
