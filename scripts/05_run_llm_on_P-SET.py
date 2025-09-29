@@ -66,6 +66,7 @@ elif value == 'All':
 print(f'attribute_output:{attribute_output_raw}, type:{type(attribute_output_raw)}')
 dataset = 'P-SET'
 prompt_version = 3
+print(f"Prompt Version {prompt_version}")
 llm_type="llama3.1:70b"
 for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:    
     output_folder = f"../exports/05b_llm_{llm_type}_{dataset}_v{prompt_version}/{ET}"
@@ -147,6 +148,9 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
                     gt_df = pd.read_pickle(gt_file) 
                     id_to_gt = {str(row[id_type]):row[gt_column] for _,row in gt_df.iterrows()}     
                     df_temp[gt_column] = df_temp[id_type].map(id_to_gt)  
-                df_temp.to_excel(f"{output_folder}/{file_name}_att_{attribute_output}.xlsx", index=False)
+                try:
+                    df_temp.to_excel(f"{output_folder}/{file_name}_att_{attribute_output}.xlsx", index=False)
+                except:
+                    print(f"Wrror in {output_folder}/{file_name}_att_{attribute_output}.xlsx")
                 df_temp.to_pickle(f"{output_folder}/{file_name}_att_{attribute_output}.pkl")
                 
