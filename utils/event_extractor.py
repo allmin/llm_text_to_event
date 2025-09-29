@@ -482,7 +482,7 @@ class EventExtractor:
                 self.caused_by.append(self.caused_by_cache[text])
                 self.event_time.append(self.event_time_cache[text])
                 self.case_attribute.append(self.case_attribute_cache[text])
-                self.actor.append(self.actor[text])
+                self.actor.append(self.actor_cache[text])
             else:                
                 self.json_response, raw_output = self.get_json_response(prompt)
                 if self.json_response:
