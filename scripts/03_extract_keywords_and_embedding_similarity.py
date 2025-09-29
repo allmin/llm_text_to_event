@@ -44,10 +44,10 @@ def extract_events(texts, extractor):
 #dictionary denotes keyword matching, biolord denotes embedding similarity
 for model in ["dictionary"]:
     extractor = EventExtractor(event_name_model_type=model, attribute_model_type="None")
-    export_folder = f"../exports/03_selected_reports_with_event_log_only_{model}_v{version}"
+    export_folder = f"../exports/03b_selected_reports_with_event_log_only_{model}_v{version}"
     os.makedirs(export_folder,exist_ok=True)
     batch_size = 100000
-    notes_selected = pd.read_pickle(f"../exports/02_filtered_patient_reports_{suffix}.pkl")
+    notes_selected = pd.read_pickle(f"../exports/02b_filtered_patient_reports_{suffix}.pkl")
     notes_selected["Events"] = ''
     
     for i in range(0, len(notes_selected), batch_size):

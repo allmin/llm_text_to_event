@@ -68,7 +68,7 @@ dataset = 'P-SET'
 prompt_version = 3
 llm_type="llama3.1:70b"
 for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:    
-    output_folder = f"../exports/05_llm_{llm_type}_{dataset}_v{prompt_version}/{ET}"
+    output_folder = f"../exports/05b_llm_{llm_type}_{dataset}_v{prompt_version}/{ET}"
     for attribute_output in attribute_output_raw:
         os.makedirs(f"{output_folder}", exist_ok=True)
         for analysis_type in ['Sent', 'Doc']:
@@ -77,7 +77,7 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
             elif analysis_type == 'Doc':
                 id_type = 'ROW_ID'
             try:
-                file = glob(f"../exports/04_groundtruth/{dataset}/Generated/{ET}*{analysis_type}*.pkl")[0]
+                file = glob(f"../exports/04b_groundtruth/{dataset}/Generated/{ET}*{analysis_type}*.pkl")[0]
             except:
                 print(f"No file found for {ET}")
                 continue
@@ -101,7 +101,7 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
             df['DCT'] = [(r['CHARTTIME'], r['STORETIME']) for _,r in df.iterrows()]
             print(f"------------{df.STORETIME-df.CHARTTIME}")
             print(analysis_type, len(df))
-            df = df[df[id_type].isin(focus_ids[analysis_type])]
+            # df = df[df[id_type].isin(focus_ids[analysis_type])]
             print(analysis_type, len(df))
             if analysis_type == 'Sent':
                 df_temp = df.copy()

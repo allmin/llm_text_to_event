@@ -9,7 +9,7 @@ import pandas as pd
 import re
 import os
 from glob import glob
-all_paths = glob("../exports/04_groundtruth/**/**")
+all_paths = glob("../exports/04b_groundtruth/**/**")
 only_folders = [p for p in all_paths if os.path.isdir(p)]
 only_folders = [p for p in only_folders if "Annotating" in p]
 
