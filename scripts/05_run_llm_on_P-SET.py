@@ -65,7 +65,7 @@ elif value == 'All':
     attribute_output_raw = [True, False]
 print(f'attribute_output:{attribute_output_raw}, type:{type(attribute_output_raw)}')
 dataset = 'P-SET'
-prompt_version = 2
+prompt_version = 3
 llm_type="llama3.1:70b"
 for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:    
     output_folder = f"../exports/05_llm_{llm_type}_{dataset}_v{prompt_version}/{ET}"
@@ -81,15 +81,23 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
             except:
                 print(f"No file found for {ET}")
                 continue
-
-            
+            df_date=pd.read_pickle("../exports/04_dictionary_features.pkl")
+            df_date[id_type] = df_date[id_type].astype(str)
+            df_date['CHARTTIME'] = pd.to_datetime(df_date['CHARTTIME'])
+            df_date['STORETIME'] = pd.to_datetime(df_date['STORETIME'])
+            id2charttime = df_date.groupby(id_type)['CHARTTIME'].min().to_dict()
+            id2storetime = df_date.groupby(id_type)['STORETIME'].max().to_dict()          
             file_name = os.path.basename(file).strip(".pkl")
             df = pd.read_pickle(file)
             df[id_type] = df[id_type].astype(str)
             df['Event_Name'] = [tuple(i) for i in df['Event_Name']]
             df['Keyword'] = [tuple(i) for i in df['Keyword']]
-            df['CHARTTIME'] = pd.to_datetime(df['CHARTTIME'])
-            df['STORETIME'] = pd.to_datetime(df['STORETIME'])
+            if "CHARTTIME" not in df.columns:
+                df['CHARTTIME'] = df[id_type].map(id2charttime)
+                df['STORETIME'] = df[id_type].map(id2storetime)
+            else:
+                df['CHARTTIME'] = pd.to_datetime(df['CHARTTIME'])
+                df['STORETIME'] = pd.to_datetime(df['STORETIME'])
             df['DCT'] = [(r['CHARTTIME'], r['STORETIME']) for _,r in df.iterrows()]
             print(f"------------{df.STORETIME-df.CHARTTIME}")
             print(analysis_type, len(df))
@@ -130,7 +138,9 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
                 df_temp.loc[:,f"Negation_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['negation'])
                 df_temp.loc[:,f"Caused_By_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['caused_by'])
                 df_temp.loc[:,f"Event_Time_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['event_time'])
-                df_temp.loc[:,f"Order_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['orders'])      
+                df_temp.loc[:,f"Order_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['orders'])
+                df_temp.loc[:,f"Case_Attributes_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['case_attributes'])   
+                df_temp.loc[:,f"Actor_LLM_Events_{col_suffix}_evidence_{analysis_type}"] = df_temp[f"LLM_Events_{col_suffix}_evidence_{analysis_type}"].apply(lambda x: x['actor'])   
                 gt_file = f"../exports/04_groundtruth/P-SET/Annotated/{ET}_{focus_type}.pkl"
                 if os.path.exists(gt_file):
                     gt_df = pd.read_pickle(gt_file) 

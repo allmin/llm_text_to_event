@@ -69,6 +69,8 @@ class EventExtractor:
         self.event_time_cache = {}
         self.caused_by_cache = {}
         self.orders_cache = {}
+        self.case_attribute_cache = {}
+        self.actor_cache = {}
     
     
     def lemmatize_keyword(self,keyword):
@@ -111,7 +113,7 @@ class EventExtractor:
         self.similarities_dict = [{}]*len(self.texts)
         for attr in ["attributes",  "orders", "event_id", "text_quotes", "attribute_dict_list", "keywords",
                      "keyword_positions", "phrases", "raw_outputs", "lemmas", "event_name_prompt_list",
-                     "event_time","negation","caused_by"]:
+                     "event_time","negation","caused_by","case_attribute", "actor"]:
             setattr(self, attr, [""] * len(self.texts))
         self.predefined_event_names = event_names
         self.predefined_event_names_w_unknown = event_names + ["Unknown"]
@@ -132,7 +134,7 @@ class EventExtractor:
             
         fields = ["texts", "predicted_events", "event_id", "similarities_dict", "keywords", "keyword_positions",
                   "attributes", "orders", "text_quotes", "phrases", "lemmas", "attribute_dict_list",
-                  "event_name_prompt_list", "raw_outputs", "event_detection_time", "event_time", "negation", "caused_by"]
+                  "event_name_prompt_list", "raw_outputs", "event_detection_time", "event_time", "negation", "caused_by","case_attribute", "actor"]
 
         # ✅ Check all fields are the same length
         lengths = [len(getattr(self, field)) for field in fields]
@@ -145,7 +147,7 @@ class EventExtractor:
         for items in zipped_data:
             (text, event, event_id, similarity_dict, keyword, keyword_position,
              attribute, order, text_quote, phrase, lemma, attribute_dict,
-             prompt, raw_output, detection_time, event_time, negation, caused_by) = items
+             prompt, raw_output, detection_time, event_time, negation, caused_by, case_attribute, actor) = items
             if self.event_name_model_type == "biolord":
                 self.event_list.append({"text":text, "event":event, "similarity":similarity_dict, "attributes": attribute_dict, "event_detection_time":detection_time})
             elif self.event_name_model_type == "dictionary":
@@ -154,6 +156,7 @@ class EventExtractor:
                 self.event_list.append({"text":text, "event":event,"event_id":event_id, "phrase":phrase, "raw_output":raw_output, 
                                         "attributes": attribute, "orders": order, "text_quotes": text_quote, 
                                         "event_time":event_time, "negation":negation, "caused_by":caused_by, "event_name_prompt":prompt, 
+                                        "case_attributes":case_attribute, "actor":actor,
                                         "event_detection_time":detection_time})
             else:
                 self.event_list.append({"text":text, "event":event, "attributes": attribute_dict, "event_detection_time":detection_time})
@@ -445,6 +448,8 @@ class EventExtractor:
         self.event_time = []
         self.caused_by = []
         self.negation = []
+        self.case_attribute = []
+        self.actor = []
         for ind, text in tqdm(enumerate(self.texts)):
             used_cache = False
             start_time = time.perf_counter()
@@ -456,8 +461,10 @@ class EventExtractor:
             event_w_description = "\n".join([f"{k} : {v}" for (k,v) in event_w_description.items()]) if type(event_w_description)==dict else event_w_description
             detected_keywords = self.prompt_evidence['keywords'][ind] if ind < len(self.prompt_evidence['keywords']) else []
             dct = self.prompt_evidence['dct'][ind] if ind < len(self.prompt_evidence['dct']) else []
-            prompt = config.get_general_prompt_template(text=text, predefined_event_names=self.predefined_event_names_w_unknown, 
-                                                        prompt_version=self.prompt_version,                                                        event_w_description=event_w_description, 
+            prompt = config.get_general_prompt_template(text=text, 
+                                                        predefined_event_names=self.predefined_event_names_w_unknown, 
+                                                        prompt_version=self.prompt_version, 
+                                                        event_w_description=event_w_description, 
                                                         attribute_output=self.attribute_output, 
                                                         keyword_input=self.keyword_input, 
                                                         example_input=self.example_input, 
@@ -474,6 +481,8 @@ class EventExtractor:
                 self.negation.append(self.negation_cache[text])
                 self.caused_by.append(self.caused_by_cache[text])
                 self.event_time.append(self.event_time_cache[text])
+                self.case_attribute.append(self.case_attribute_cache[text])
+                self.actor.append(self.actor[text])
             else:                
                 self.json_response, raw_output = self.get_json_response(prompt)
                 if self.json_response:
@@ -488,6 +497,8 @@ class EventExtractor:
                         caused_by = []
                         event_time = []
                         orders = []
+                        case_attribute = []
+                        actor = []
                         for event_inst in event.get('events', []):
                             event_id.append(event_inst.get("event_id","Unknown"))
                             event_name.append(event_inst.get("event_type","Unknown"))
@@ -495,8 +506,10 @@ class EventExtractor:
                             negation.append(event_inst.get("negation", "Unknown"))
                             caused_by.append(event_inst.get("caused_by", "Unknown"))
                             event_time.append(event_inst.get("time", "Unknown"))
-                            attributes.append({event_inst.get("event_type","Unknown"):event_inst.get("attributes",{})}) 
+                            actor.append(event_inst.get("actor", "Unknown"))
+                            attributes.append({event_inst.get("event_type","Unknown"):event_inst.get("event_attributes",{})}) 
                         orders.append(event.get("order","[]"))
+                        case_attribute.append(event.get("case_attributes",{}))
                     except Exception as e:
                         print(f"Exception: {e}, Index: {ind}, Text: {text}, JSON Response: {self.json_response}")
                 assert len(event_name) == len(text_quotes) == len(attributes), f"{len(event_name)}, {len(text_quotes)}, {len(attributes)}"
@@ -509,6 +522,8 @@ class EventExtractor:
                 self.caused_by.append(caused_by)
                 self.event_time.append(event_time)
                 self.orders.append(orders)
+                self.case_attribute.append(case_attribute)
+                self.actor.append(actor)
                 self.event_name_cache[text]=event_name
                 self.event_id_cache[text]=event_id
                 self.attributes_cache[text]=attributes
@@ -518,6 +533,8 @@ class EventExtractor:
                 self.caused_by_cache[text]=caused_by
                 self.event_time_cache[text]=event_time
                 self.orders_cache[text]=orders
+                self.case_attribute_cache[text]=case_attribute
+                self.actor_cache[text]=actor
                 
             self.event_name_prompt_list.append(prompt)
             end_time = time.perf_counter()

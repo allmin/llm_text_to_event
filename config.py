@@ -406,7 +406,7 @@ def get_output_format(predefined_event_names, attribute_output, prompt_version):
         attribute_specs = ""
         if attribute_output:
             attribute_specs = """
-            "attributes": { 
+            "event_attributes": { 
                             // Only extract attributes for events present in the text:
                             "Sleep": { 
                             "quality": string (e.g., poor, good, etc.),
@@ -432,12 +432,18 @@ def get_output_format(predefined_event_names, attribute_output, prompt_version):
                             "method": string (e.g., oral, tube, etc.)
                             }"""
         output_format = """
-                    {    
-                    "events": [ 
+                    {   
+                    "case_attributes":[ // all properties of the patients case that ocurred before the shift or at home or patient history.
+                        {
+                        "attribute_name":"attribute_value" // attributes of the case such as patient history.
+                        }
+                    ]  
+                    "events": [ //events occurreing during the shift of the clinical narrative
                         { 
                         "event_id": string, ("e1", "e2", etc.)
                         "event_type": string ("Sleep", "Excretion", "Eating", "Family", "Pain", "Unknown"), 
                         "text_quote": string (fragment of the text from which attributes are extracted), 
+                        "actor": string ("patient", "family member", "others"),
                         "negation": boolean, (true if the event is negated e.g., did not sleep. false otherwise)
                         "time": string (e.g., am, morning, 5pm . default: "Unknown"), 
                         "caused_by": string (name of another event that caused this event. default: "Unknown"), 
@@ -445,13 +451,14 @@ def get_output_format(predefined_event_names, attribute_output, prompt_version):
                         } 
                         } 
                     ], 
-                    "order": [ 
+                    "order": [ //partial order of extracted events
                         { 
                         "event_id_1": string, (e1, e2...)
                         "relation": string ("before", "after", "simultaneous", "unknown"), 
                         "event_id_2": string (e1, e2...)
                         } 
-                    ]  
+                    ],
+                     
                     }    
 
 """
