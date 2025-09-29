@@ -387,15 +387,16 @@ def get_classification_rules(attribute_output, prompt_version):
 
 def get_output_format(predefined_event_names, attribute_output, prompt_version):
     if prompt_version == 1:
+        attribute_clause = (""", "attributes": {
+                                        "<attribute_name>": "<attribute_value>"
+                                        }""") if attribute_output else ""
         output_format = f"""{{
                                 "events": [
                                     {{
                                     "event_id": "< A unique id eg.: e1 | e2 |...>"
                                     "event_type": "<{" | ".join(predefined_event_names)}>",
-                                    "text_quote": "<fragement from the text indicating the event_type>"{""",
-                        "attributes": {
-                            "<attribute_name>": "<attribute_value>"
-                        }""" if attribute_output else ""}
+                                    "text_quote": "<fragement from the text indicating the event_type>"
+                                    {attribute_clause}
                                     }}
                                 ],
                                 "order": [
