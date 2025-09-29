@@ -408,7 +408,7 @@ def get_output_format(predefined_event_names, attribute_output, prompt_version):
         if attribute_output:
             attribute_specs = """
             "attributes": { 
-                            // Only extract attributes for events present in the text:
+                            // Only extract attributes for events present in the text.
                             "Sleep": { 
                             "quality": string (e.g., poor, good, etc.),
                             "duration": string (e.g., short, on and off, etc.),
