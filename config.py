@@ -1,10 +1,16 @@
 llm_type = "llama3.1:70b"
 event_types = ["Pain", "Sleep", "Excretion", "Eating", "Family"]
-event_descriptions = {"Eating": "The patient takes food into their body by mouth. Identifed Always",
-                       "Excretion": "The patient discharges waste matter from their body. Identifed Always",
+# event_descriptions = {"Eating": "The patient takes food into their body by mouth. Identifed Always",
+#                        "Excretion": "The patient discharges waste matter from their body. Identifed Always",
+#                        "Family": "The patient has a visit, call, or communication with a family member.",
+#                        "Pain": "The patient reports or shows signs of pain. Identifed Always",
+#                        "Sleep": "The patient sleeps or the sleep’s quality or quantity is described. Identifed Always."
+#                             }
+event_descriptions = {"Eating": "The patient takes food into their body by mouth.",
+                       "Excretion": "The patient discharges waste matter from their body.",
                        "Family": "The patient has a visit, call, or communication with a family member.",
-                       "Pain": "The patient reports or shows signs of pain. Identifed Always",
-                       "Sleep": "The patient sleeps or the sleep’s quality or quantity is described. Identifed Always."
+                       "Pain": "The patient reports or shows signs of pain.",
+                       "Sleep": "The patient sleeps or the sleep’s quality or quantity is described."
                             }
 event_description_dict_embedder = event_descriptions
 
@@ -63,6 +69,25 @@ def get_general_prompt_template(text, predefined_event_names, event_w_descriptio
            ---
            Text written between: {dct[0]} and {dct[1]}
            Text:
+           {text}
+        """
+        
+    elif prompt_version == 4:
+        general_prompt_template = f"""
+        **Classification and Attribute Extraction Task** 
+            Classify the following sentence into events that took place DURING THE SHIFT in which this note was written, 
+            using one or more of the following categories: 
+            {event_w_description}.
+            
+            Conditions: 
+            {classification_rules}
+            For each detected event, output strictly valid JSON following the schema below: 
+            ```
+           {output_format}  
+           ```
+           {output_rules}
+           ---
+           Text (written between {dct[0]} and {dct[1]}):
            {text}
         """
         
@@ -383,6 +408,10 @@ def get_classification_rules(attribute_output, prompt_version):
         classification_rules.append("If the event talks about a patient's history (before the shift) or future plan of an event (after the shift), DO NOT EXTRACT that event.")
         classification_rules.append("Consider events ONLY if they relate to the patient (e.g., exclude caregivers' or family members' own experiences of Sleep/Excretion/Pain/Eating/Family).")
         classification_rules = " ".join(classification_rules)
+    elif prompt_version == 4:
+        classification_rules.append("If the event talks about a patient's history (before the shift) or future plan/request of an event (after the shift), DO NOT EXTRACT that event.")
+        classification_rules.append("Consider events ONLY if they relate to the patient as the actor (e.g., exclude caregivers' or family members' own experiences).")
+        classification_rules.append("If the text has unclear actor, assume it as patient.")
     return classification_rules
 
 def get_output_format(predefined_event_names, attribute_output, prompt_version):
@@ -403,7 +432,7 @@ def get_output_format(predefined_event_names, attribute_output, prompt_version):
                                     ["e1", "before" | "after" | "simultaneous", "e2" ]
                                 ]
                                 }}"""  
-    elif prompt_version in [2,3]:
+    elif prompt_version in [2,3,4]:
         attribute_specs = ""
         if attribute_output:
             attribute_specs = """
@@ -432,37 +461,67 @@ def get_output_format(predefined_event_names, attribute_output, prompt_version):
                             "amount": string, (e.g., 1, 2 bowls, etc.)
                             "method": string (e.g., oral, tube, etc.)
                             }"""
-        output_format = """
-                    {   
-                    "case_attributes":[ // all properties of the patients case that ocurred before the shift or at home or patient history.
-                        {
-                        "attribute_name":"attribute_value" // attributes of the case such as patient history.
-                        }
-                    ]  
-                    "events": [ //events occurreing during the shift of the clinical narrative
-                        { 
-                        "event_id": string, ("e1", "e2", etc.)
-                        "event_type": string ("Sleep", "Excretion", "Eating", "Family", "Pain", "Unknown"), 
-                        "text_quote": string (fragment of the text from which attributes are extracted), 
-                        "actor": string ("patient", "family member", "others"),
-                        "negation": boolean, (true if the event is negated e.g., did not sleep. false otherwise)
-                        "time": string (e.g., am, morning, 5pm . default: "Unknown"), 
-                        "caused_by": string (name of another event that caused this event. default: "Unknown"), 
-                        """ + attribute_specs + """ 
-                        } 
-                        } 
-                    ], 
-                    "order": [ //partial order of extracted events
-                        { 
-                        "event_id_1": string, (e1, e2...)
-                        "relation": string ("before", "after", "simultaneous", "unknown"), 
-                        "event_id_2": string (e1, e2...)
-                        } 
-                    ],
-                     
-                    }    
-
-"""
+        if prompt_version in [2,3]:
+            output_format = """
+                        {   
+                        "case_attributes":[ // all properties of the patients case that ocurred before the shift or at home or patient history.
+                            {
+                            "attribute_name":"attribute_value" // attributes of the case such as patient history.
+                            }
+                        ]  
+                        "events": [ //events occurreing during the shift of the clinical narrative
+                            { 
+                            "event_id": string, ("e1", "e2", etc.)
+                            "event_type": string ("Sleep", "Excretion", "Eating", "Family", "Pain", "Unknown"), 
+                            "text_quote": string (fragment of the text from which attributes are extracted), 
+                            "actor": string ("patient", "family member", "others"),
+                            "negation": boolean, (true if the event is negated e.g., did not sleep. false otherwise)
+                            "time": string (e.g., am, morning, 5pm . default: "Unknown"), 
+                            "caused_by": string (name of another event that caused this event. default: "Unknown"), 
+                            """ + attribute_specs + """ 
+                            } 
+                            } 
+                        ], 
+                        "order": [ //partial order of extracted events
+                            { 
+                            "event_id_1": string, (e1, e2...)
+                            "relation": string ("before", "after", "simultaneous", "unknown"), 
+                            "event_id_2": string (e1, e2...)
+                            } 
+                        ],
+                        
+                        }"""
+        elif prompt_version in [4]:
+            output_format = """
+                        {   
+                        "case_attributes":[ // all properties of the patients case that ocurred before the shift or at home or patient history or plan.
+                            {
+                            "attribute_name":"attribute_value" // attributes of the case such as patient history.
+                            }
+                        ]  
+                        "events": [ //events occurred/occurring DURING THE SHIFT
+                            { 
+                            "event_id": string, ("e1", "e2", etc.)
+                            "event_type": string ("Sleep", "Excretion", "Eating", "Family", "Pain", "Unknown"), 
+                            "text_quote": string (fragment of the text from which attributes are extracted), 
+                            "actor": string ("patient", "family member", "others"),
+                            "object": string ("patient", "family member", "others"),
+                            "negation": boolean, (true if the event is negated e.g., did not sleep. false otherwise)
+                            "time": string (e.g., am, morning, 5pm . default: "Unknown"), 
+                            "caused_by": string (name of another event that caused this event. default: "Unknown"), 
+                            """ + attribute_specs + """ 
+                            } 
+                            } 
+                        ], 
+                        "order": [ //partial order of extracted events
+                            { 
+                            "event_id_1": string, (e1, e2...)
+                            "relation": string ("before", "after", "simultaneous", "unknown"), 
+                            "event_id_2": string (e1, e2...)
+                            } 
+                        ],
+                        
+                        }"""
     return output_format
 
 def get_output_rules(attribute_output, prompt_version):
@@ -486,4 +545,6 @@ def get_output_rules(attribute_output, prompt_version):
                         * For events like Family, if the event is negated (e.g. "no family member visited"), it is ignored and not 
                         included in the output. 
                         """
+    elif prompt_version in [4]:
+        output_rules = f""
     return output_rules

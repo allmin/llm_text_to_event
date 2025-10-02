@@ -64,10 +64,11 @@ export $(grep -v '^#' .env | xargs)
 # -----------------------------
 nvidia-smi
 cd scripts
-python 05_run_llm_on_P-SET.py --attribute_output True
+# python 05_run_llm_on_P-SET.py --attribute_output True
+python 03_extract_keywords_and_embedding_similarity.py
 nvidia-smi
 # python event_extractor.py
 # sbatch --mail-type=ALL --mail-user=a.p.s.susaiyah@tue.nl run_llm_snellius.sh
 # srun --partition=gpu_a100 --gres=gpu:1 --cpus-per-task=18 --mem=100G --time=8:00:00 --pty bash -i
-srun --partition=gpu_mig --reservation=terv92681 --gres=gpu:a100_3g.20gb:1 --cpus-per-gpu=9 --mem=60G --mail-type=BEGIN,END,FAIL --mail-user=your_email@example.com --pty bash
+# srun --partition=gpu_mig --reservation=terv92681 --gres=gpu:a100_3g.20gb:1 --cpus-per-gpu=9 --mem=60G --mail-type=BEGIN,END,FAIL --mail-user=your_email@example.com --pty bash
 # srun --partition=gpu_a100 --gres=gpu:1 --cpus-per-task=18 --mem=100G --time=8:00:00 jupyter lab --no-browser --port=8888

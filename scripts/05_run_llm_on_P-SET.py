@@ -65,14 +65,14 @@ elif value == 'All':
     attribute_output_raw = [True, False]
 print(f'attribute_output:{attribute_output_raw}, type:{type(attribute_output_raw)}')
 dataset = 'P-SET'
-prompt_version = 3
+prompt_version = 4
 print(f"Prompt Version {prompt_version}")
 llm_type="llama3.1:70b"
 for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:    
     output_folder = f"../exports/05b_llm_{llm_type}_{dataset}_v{prompt_version}/{ET}"
     for attribute_output in attribute_output_raw:
         os.makedirs(f"{output_folder}", exist_ok=True)
-        for analysis_type in ['Sent', 'Doc']:
+        for analysis_type in ['Doc']:
             if analysis_type == 'Sent':
                 id_type = 'UID'
             elif analysis_type == 'Doc':
