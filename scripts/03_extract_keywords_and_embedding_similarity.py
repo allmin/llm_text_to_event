@@ -37,6 +37,8 @@ def extract_events(texts, extractor):
     event_description_dict = event_description_dict_embedder
     if extractor.event_name_model_type == "biolord" and version == 2:
         event_types = [f"{k} : {v}" for (k,v) in event_description_dict.items()]
+    else:
+        event_types = event_types + ['Sleepcontext']
     events = extractor.extract_events(texts=texts, event_names=event_types, threshold=0.2)
     assert(len(texts)==len(events)), f"{len(events)}, {events}, {len(texts)}, {texts}"
     return events
