@@ -72,7 +72,7 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
     output_folder = f"../exports/05b_llm_{llm_type}_{dataset}_v{prompt_version}/{ET}"
     for attribute_output in attribute_output_raw:
         os.makedirs(f"{output_folder}", exist_ok=True)
-        for analysis_type in ['Doc']:
+        for analysis_type in ['Sent','Doc']:
             if analysis_type == 'Sent':
                 id_type = 'UID'
             elif analysis_type == 'Doc':
