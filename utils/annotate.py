@@ -9,7 +9,7 @@ import pandas as pd
 import re
 import os
 from glob import glob
-all_paths = glob("../exports/04b_groundtruth/**/**")
+all_paths = glob("../exports/04c_groundtruth/**/**")
 only_folders = [p for p in all_paths if os.path.isdir(p)]
 only_folders = [p for p in only_folders if "Annotating" in p]
 
@@ -116,13 +116,15 @@ for i, row in subset.iterrows():
     st.markdown(f"**Row {i}** — ID: `{row[id]}` — Keyword: `{row['Keyword']}`")
 
     # Highlight keyword in sentence
-    pattern = re.escape(str(row["Keyword"]))
+    
     if focus == "Doc":
         text_to_highlight = str(row["Document"])
     else:
         text_to_highlight = str(row["Sentence"])
-    highlighted = re.sub(pattern, f"**:orange[{row['Keyword']}]**", text_to_highlight, flags=re.IGNORECASE)
-    st.markdown(highlighted, unsafe_allow_html=True)
+    for kw in row['Keyword']:
+        pattern = re.escape(str(kw))
+        text_to_highlight = re.sub(pattern, f"**:orange[{kw}]**", text_to_highlight, flags=re.IGNORECASE)
+    st.markdown(text_to_highlight, unsafe_allow_html=True)
 
     current_val = row[f"{focus}_gt_{ET}"]
     options = {
