@@ -489,7 +489,7 @@ class EventExtractor:
                 if self.json_response:
                     try:
                         event = json.loads(self.json_response)
-                        print(text,event)
+                        print(text, event)
                         event_id = []
                         event_name = []
                         attributes = []

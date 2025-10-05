@@ -68,6 +68,6 @@ python 05_run_llm_on_P-SET.py --attribute_output True --fine_analysis
 nvidia-smi
 # python event_extractor.py
 # sbatch --mail-type=ALL --mail-user=a.p.s.susaiyah@tue.nl run_llm_snellius.sh
-# srun --partition=gpu_a100 --gres=gpu:1 --cpus-per-task=18 --mem=100G --time=8:00:00 --pty bash -i
+# srun --partition=gpu_h100 --gres=gpu:1 --cpus-per-task=16 --mem=180G --time=1:00:00 --pty bash -i
 # srun --partition=gpu_mig --reservation=terv92681 --gres=gpu:1 --mem=60G --time=24:00:00 --pty bash -i
 # srun --partition=gpu_a100 --gres=gpu:1 --cpus-per-task=18 --mem=100G --time=8:00:00 jupyter lab --no-browser --port=8888

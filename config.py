@@ -94,7 +94,7 @@ def get_general_prompt_template(text, predefined_event_names, event_w_descriptio
     elif prompt_version == 5:
         general_prompt_template = f"""
         **Classification and Attribute Extraction Task** 
-            Classify the Text at the end of this prompt into events that took place DURING THE SHIFT in which this text was written, 
+            Classify the Text at the end of this prompt into events that took place at the HOSPITAL, DURING THE SHIFT in which this text was written, 
             using one or more of the following categories: 
             {event_w_description}.
             
