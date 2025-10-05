@@ -38,6 +38,8 @@ def load_data(path):
         df["good_example"] = False
     if "comment" not in df.columns:
         df['comment'] = ''
+    if "is_patient" not in df.columns:
+        df['is_patient'] = True
     df.index = range(len(df))
     return df
 

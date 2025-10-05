@@ -484,10 +484,8 @@ class EventExtractor:
                 self.case_attribute.append(self.case_attribute_cache[text])
                 self.actor.append(self.actor_cache[text])
             else:
-                try:                
-                    self.json_response, raw_output = self.get_json_response(prompt)
-                except:
-                    self.json_response = None
+                self.json_response, raw_output = self.get_json_response(prompt)
+
                 if self.json_response:
                     try:
                         event = json.loads(self.json_response)
@@ -573,7 +571,9 @@ if __name__ == "__main__":
     mtexts = ["The patient slept in the morning, took a nap in the afternoon, and had a good night's sleep."]
     mtexts = ["The patient couldn't eat due to severe pain in the throat.", "Due to the constipation, the patient couldnt sleep well and was in constant pain thought the day"]
     mtexts = ["patient reported history of sleep apnea and uses oral airway piece at hs at home"]
-    
+    mtexts = ["(has not slept well for past 2 nights)","has not slept well for past 2 nights","The patient has not slept well for past 2 nights", "The patient has slept well for past 2 nights", "The patient has slept well past night","(The patient has slept well for past 2 nights)", "(The patient has slept well past night)"]
+
+
 #     mtexts = ['bp lower when asleep',
 #  'sleeping in naps',
 #  'slept well',
@@ -597,20 +597,25 @@ if __name__ == "__main__":
 
     
     LLAMA2 = EventExtractor(event_name_model_type='llm', attribute_model_type='None',llm_type = "llama3.1:70b")   
-    LLAMA2.extract_events(texts=mtexts, event_names=mevent_names, 
+    LLAMA2.extract_events(texts=mtexts, event_names=config.event_types, 
                                 event_descriptions=config.event_descriptions,
-                                prompt_version=3,
+                                prompt_version=4,
                                 prompt_evidence={'keywords':DICT.keywords, 
                                                  'event_names':DICT.predicted_events, 
-                                                 'dct':[(23,45)]
+                                                 'dct':[('2102-09-27 06:28:00','2102-09-27 06:46:00')]*len(mtexts)
                                                 },
                                 attribute_output=True, 
-                                keyword_input=True, example_input=True,)
-    print("LLAMA_all_evidence_events:",
-          LLAMA2.event_list[0]["event_name_prompt"],
-          LLAMA2.event_list[0]["attributes"], 
-          LLAMA2.event_list[0]["text_quotes"],
-          LLAMA2.orders)
+                                keyword_input=False, example_input=True,)
+    for i in range(len(mtexts)):
+        print("LLAMA_all_evidence_events:", i, 
+            LLAMA2.event_list[i]["text"],
+            LLAMA2.event_list[i]["event"],
+            LLAMA2.event_list[i]["negation"],
+            # LLAMA2.event_list[i]["event_name_prompt"],
+            # LLAMA2.event_list[i]["attributes"], 
+            # LLAMA2.event_list[i]["text_quotes"],
+            )
+    print("order:",LLAMA2.orders)
     # sudo kill -9 $(nvidia-smi | awk 'NR>8 {print $5}' | grep -E '^[0-9]+$')
     #  srun --partition=gpu_h100 --gres=gpu:2 --cpus-per-task=18 --mem=100G --time=8:00:00 --pty bash -i
     

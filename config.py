@@ -15,6 +15,7 @@ event_descriptions = {"Eating": "The patient takes food into their body by mouth
 event_description_dict_embedder = event_descriptions
 
 
+
 def get_general_prompt_template(text, predefined_event_names, event_w_description, prompt_version, attribute_output, keyword_input, example_input, detected_keywords, dct):
     task_description = get_task_description(attribute_output,keyword_input)
     classification_rules = get_classification_rules(attribute_output,prompt_version)
@@ -76,6 +77,24 @@ def get_general_prompt_template(text, predefined_event_names, event_w_descriptio
         general_prompt_template = f"""
         **Classification and Attribute Extraction Task** 
             Classify the following sentence into events that took place DURING THE SHIFT in which this note was written, 
+            using one or more of the following categories: 
+            {event_w_description}.
+            
+            Conditions: 
+            {classification_rules}
+            For each detected event, output strictly valid JSON following the schema below: 
+            ```
+              {output_format}  
+            ```
+           {output_rules}
+           
+           Text (written between {dct[0]} and {dct[1]}):
+           {text}
+        """
+    elif prompt_version == 5:
+        general_prompt_template = f"""
+        **Classification and Attribute Extraction Task** 
+            Classify the Text at the end of this prompt into events that took place DURING THE SHIFT in which this text was written, 
             using one or more of the following categories: 
             {event_w_description}.
             
@@ -412,6 +431,11 @@ def get_classification_rules(attribute_output, prompt_version):
         classification_rules.append("If the event talks about a patient's history (before the shift) or future plan/request of an event (after the shift), DO NOT EXTRACT that event.")
         classification_rules.append("Consider events ONLY if they relate to the patient as the actor (e.g., exclude caregivers' or family members' own experiences).")
         classification_rules.append("If the text has unclear actor, assume it as patient.")
+    elif prompt_version == 5:
+        classification_rules.append("If the event talks about a patient's history (before the shift) or future plan/request of an event (after the shift), DO NOT EXTRACT that event.")
+        classification_rules.append("Consider events ONLY if they relate to the patient as the actor (e.g., exclude caregivers' or family members' own experiences).")
+        classification_rules.append("""An event is extracted from the text even if it is negated (e.g. "did not sleep"), but the respective negation attribute is set to True.""")
+        classification_rules.append("If the text has unclear actor, assume it as patient.")
     return classification_rules
 
 def get_output_format(predefined_event_names, attribute_output, prompt_version):
@@ -432,7 +456,7 @@ def get_output_format(predefined_event_names, attribute_output, prompt_version):
                                     ["e1", "before" | "after" | "simultaneous", "e2" ]
                                 ]
                                 }}"""  
-    elif prompt_version in [2,3,4]:
+    elif prompt_version in [2,3,4,5]:
         attribute_specs = ""
         if attribute_output:
             attribute_specs = """
@@ -491,7 +515,7 @@ def get_output_format(predefined_event_names, attribute_output, prompt_version):
                         ],
                         
                         }"""
-        elif prompt_version in [4]:
+        elif prompt_version in [4,5]:
             output_format = """
                         {   
                         "case_attributes":[ // all properties of the patients case that ocurred before the shift or at home or patient history or plan.
@@ -545,6 +569,6 @@ def get_output_rules(attribute_output, prompt_version):
                         * For events like Family, if the event is negated (e.g. "no family member visited"), it is ignored and not 
                         included in the output. 
                         """
-    elif prompt_version in [4]:
+    elif prompt_version in [4,5]:
         output_rules = ''
     return output_rules
