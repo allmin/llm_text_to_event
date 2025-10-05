@@ -8,7 +8,7 @@
 #SBATCH --partition=gpu_h100
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=180G
-#SBATCH --time=12:00:00
+#SBATCH --time=24:00:00
 #SBATCH --signal=B:USR1@60
 
 # -----------------------------
