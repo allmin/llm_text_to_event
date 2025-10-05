@@ -64,7 +64,7 @@ export $(grep -v '^#' .env | xargs)
 # -----------------------------
 nvidia-smi
 cd scripts
-python 05_run_llm_on_P-SET.py --attribute_output True
+python 05_run_llm_on_P-SET.py --attribute_output True --fine_analysis
 nvidia-smi
 # python event_extractor.py
 # sbatch --mail-type=ALL --mail-user=a.p.s.susaiyah@tue.nl run_llm_snellius.sh

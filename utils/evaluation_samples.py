@@ -12,13 +12,13 @@ for focus in ["Doc", "Sent"]:
         uid = "ROW_ID"
     elif focus == "Sent":
         uid = "UID"
-    files = glob(f"../exports/06_evaluation_samples/*_Event_Name_LLM_Events_all_evidence_{focus}_Sleep.xlsx")
+    files = glob(f"../exports/06_evaluation_samples/*_Event_Name_LLM_Events_example_evidence_{focus}_Sleep.xlsx")
     full_df = []
     for file in files:
         file_name = os.path.basename(file)
         df = pd.read_excel(file)
-        if file_name[:2] == "FP":
-            sample_per = 0.6
+        if file_name[:2] in ["FP","FN"]:
+            sample_per = 0.9
         else:
             sample_per = 0.1
         N = len(df)
