@@ -40,12 +40,13 @@ example_input = st.radio("Example_input",options=[True, False], index=1)
 event_extractor_object = EventExtractor(event_name_model_type="llm",attribute_model_type="None",llm_type=llm_type)
 if st.button("Run LLM"):
     res  = event_extractor_object.extract_events(texts=input_to_analyse,                                                                                                               
-                                                event_names=event_types, 
-                                                event_descriptions=event_descriptions, 
-                                                prompt_version=prompt_version,
-                                                prompt_evidence=evidence, 
-                                                attribute_output=attribute_output,
-                                                keyword_input=keyword_input, 
-                                                example_input=example_input,
-                                                )
+                                            event_names=event_types, 
+                                            event_descriptions=event_descriptions, 
+                                            prompt_version=prompt_version,
+                                            prompt_evidence=evidence, 
+                                            attribute_output=attribute_output,
+                                            keyword_input=keyword_input, 
+                                            example_input=example_input,
+                                            )
+    st.write(res.event_list[0].event_name_prompt)
     st.write(res.event_list[0].raw_output)
