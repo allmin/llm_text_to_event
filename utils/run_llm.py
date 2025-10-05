@@ -1,3 +1,4 @@
+# streamlit run run_llm.py --server.port 8503
 # CUDA_VISIBLE_DEVICES=0 python 05_run_llm_on_P-SET.py --attribute_output True
 # CUDA_VISIBLE_DEVICES=1 python 05_run_llm_on_P-SET.py --attribute_output False
 # python -i 05_run_llm_on_P-SET.py --attribute_output All
