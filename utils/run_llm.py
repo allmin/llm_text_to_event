@@ -17,7 +17,7 @@ if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 from utils.event_extractor import EventExtractor
 from utils.evaluation_samples import focus_ids as evaluation_focus_ids
-from config import event_types, event_descriptions
+import config
 
 import streamlit as st
 
@@ -33,20 +33,34 @@ attribute_output = True
 
 input_to_analyse = [st.text_input("Enter Text Fragment","")]
 llm_type=st.text_input("LLM_Type","llama3.1:70b")
-evidence={'keywords':[], 'event_names':[], 'dct':[('2167-05-18 05:26:00','2167-05-18 05:33:00')]}
+evidence={'keywords':[], 'event_names':[], 'dct':[]}
+dct = eval(st.text_input("DCT:","('2167-05-18 05:26:00','2167-05-18 05:33:00')"))
 prompt_version = st.selectbox("Prompt version",options=[2,3,4],index=2)
 keyword_input = st.radio("Keyword_input",options=[True, False], index=1)
 example_input = st.radio("Example_input",options=[True, False], index=1)
 event_extractor_object = EventExtractor(event_name_model_type="llm",attribute_model_type="None",llm_type=llm_type)
 if st.button("Run LLM"):
-    res  = event_extractor_object.extract_events(texts=input_to_analyse,                                                                                                               
-                                            event_names=event_types, 
-                                            event_descriptions=event_descriptions, 
-                                            prompt_version=prompt_version,
-                                            prompt_evidence=evidence, 
-                                            attribute_output=attribute_output,
-                                            keyword_input=keyword_input, 
-                                            example_input=example_input,
-                                            )
-    st.write(res.event_list[0].event_name_prompt)
-    st.write(res.event_list[0].raw_output)
+    prompt = config.get_general_prompt_template(text=input_to_analyse, 
+                                                predefined_event_names=config.event_types + ['Unknown'], 
+                                                prompt_version=prompt_version, 
+                                                event_w_description=config.event_descriptions, 
+                                                attribute_output=attribute_output, 
+                                                keyword_input=keyword_input, 
+                                                example_input=example_input, 
+                                                detected_keywords="",
+                                                dct=dct)
+    st.write(prompt)
+    try:
+        res  = event_extractor_object.extract_events(texts=input_to_analyse,                                                                                                               
+                                                event_names=config.event_types, 
+                                                event_descriptions=config.event_descriptions, 
+                                                prompt_version=prompt_version,
+                                                prompt_evidence=evidence, 
+                                                attribute_output=attribute_output,
+                                                keyword_input=keyword_input, 
+                                                example_input=example_input,
+                                                )
+        st.write(res.event_list[0].event_name_prompt)
+        st.write(res.event_list[0].raw_output)
+    except:
+        print("No LLM")
