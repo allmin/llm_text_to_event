@@ -20,6 +20,14 @@ from config import event_types, event_descriptions
 import argparse
 
 
+analysis_types = ['Sent','Doc']
+kw_input_types = [False]
+ex_input_types = [True]
+event_types_local = ['Sleep','Excretion','Eating','Family','Pain'][:1]
+dataset = 'P-SET'
+prompt_version = 4
+print(f"Prompt Version {prompt_version}")
+llm_type="llama3.1:70b"
 
 def get_col_suffix(keyword_input, example_input):
     col_suffix = "no"
@@ -71,15 +79,12 @@ if value in [True, False]:
 elif value == 'All':
     attribute_output_raw = [True, False]
 print(f'attribute_output:{attribute_output_raw}, type:{type(attribute_output_raw)}')
-dataset = 'P-SET'
-prompt_version = 4
-print(f"Prompt Version {prompt_version}")
-llm_type="llama3.1:70b"
-for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:    
+
+for ET in event_types_local:    
     output_folder = f"../exports/05b_llm_{llm_type}_{dataset}_v{prompt_version}{"_fa" if fine_analysis else ""}/{ET}"
     for attribute_output in attribute_output_raw:
         os.makedirs(f"{output_folder}", exist_ok=True)
-        for analysis_type in ['Sent','Doc']:
+        for analysis_type in analysis_types:
             if analysis_type == 'Sent':
                 id_type = 'UID'
             elif analysis_type == 'Doc':
@@ -128,7 +133,7 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
             print(f"Event Type: {ET} | Rows: {len(df_temp)} | Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | File: {file_name}")
             print(f'attribute_output:{attribute_output}, Time Start: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
             evidence={'keywords':df_temp.Keyword.tolist(), 'event_names':df_temp.Event_Name.tolist(), 'dct':df_temp.DCT.tolist()}
-            for keyword_input, example_input in [i for i in product([False],[True])]:
+            for keyword_input, example_input in [i for i in product(kw_input_types,ex_input_types)]:
                 print(f"keyword_input:{keyword_input}, example_input:{example_input}, attribute_output:{attribute_output}, analysis_type:{analysis_type}")
                 col_suffix = get_col_suffix(keyword_input, example_input)
                 event_extractor_object = EventExtractor(event_name_model_type="llm",attribute_model_type="None",llm_type=llm_type)
