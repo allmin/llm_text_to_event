@@ -1,4 +1,4 @@
-# streamlit run run_llm.py --server.port 8503
+# streamlit run annotate.py --server.port 8502
 # fuser -k 8501/tcp || true; streamlit run annotate.py --server.port 8501
 #srun --pty -p gpu_mig -t 01-00:00:00 -N 1 -n 1 --mem=8G streamlit run annotate.py --server.port 8501 --server.address 0.0.0.0
 # srun --pty -p gpu_a100 -t 01-00:00:00 -N 1 -n 1 --gpus-per-node 1 --mem=8G bash
