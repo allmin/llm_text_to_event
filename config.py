@@ -83,10 +83,10 @@ def get_general_prompt_template(text, predefined_event_names, event_w_descriptio
             {classification_rules}
             For each detected event, output strictly valid JSON following the schema below: 
             ```
-           {output_format}  
-           ```
+              {output_format}  
+            ```
            {output_rules}
-           ---
+           
            Text (written between {dct[0]} and {dct[1]}):
            {text}
         """
@@ -535,8 +535,8 @@ def get_output_rules(attribute_output, prompt_version):
                         - Their partial orders can be expressed using the "order" section.
                         - Do not include extra keys, comments, or text.
                         {'- Each object in "events" must contain "event_type", "text_quote", and "attributes".' if attribute_output else '- Each object in "events" must contain "event_type" and "text_quote".' }
-                        {'- If an event attribute type has no value mentioned, return "attributes": {"< attribute name >:Unknown"} for each attribute type defined for the event type' if attribute_output else ''} 
-                """
+                        {'- If an event attribute type has no value mentioned, return "attributes": {"< attribute name >:Unknown"} for each attribute type defined for the event type' if attribute_output else ''}
+                        """
     elif prompt_version in [2,3]:
         output_rules = f"""
                         **Negation Policy:** 
@@ -546,5 +546,5 @@ def get_output_rules(attribute_output, prompt_version):
                         included in the output. 
                         """
     elif prompt_version in [4]:
-        output_rules = f""
+        output_rules = ''
     return output_rules
