@@ -15,11 +15,19 @@ parent_dir = os.path.abspath(os.path.join(os.getcwd(), '..'))
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 from utils.event_extractor import EventExtractor
-from utils.evaluation_samples import focus_ids
+from utils.evaluation_samples import focus_ids as evaluation_focus_ids
 from config import event_types, event_descriptions
 import argparse
 
 
+analysis_types = ['Sent','Doc']
+kw_input_types = [False]
+ex_input_types = [True]
+event_types_local = ['Sleep','Excretion','Eating','Family','Pain'][:1]
+dataset = 'P-SET'
+prompt_version = 4
+print(f"Prompt Version {prompt_version}")
+llm_type="llama3.1:70b"
 
 def get_col_suffix(keyword_input, example_input):
     col_suffix = "no"
@@ -52,27 +60,31 @@ parser.add_argument(
     default='True',
     help="Choose between 'True', 'False', or 'All'"
 )
+parser.add_argument(
+    '--fine_analysis',
+    action='store_true',
+    help="Enable fine analysis"
+)
+
 
 args = parser.parse_args()
 
 mapping = {"True": True, "False": False, "All": "All"}
 value = mapping[args.attribute_output]
 print(value)
+fine_analysis = args.fine_analysis
 
 if value in [True, False]:
     attribute_output_raw = [args.attribute_output]
 elif value == 'All':
     attribute_output_raw = [True, False]
 print(f'attribute_output:{attribute_output_raw}, type:{type(attribute_output_raw)}')
-dataset = 'P-SET'
-prompt_version = 4
-print(f"Prompt Version {prompt_version}")
-llm_type="llama3.1:70b"
-for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:    
-    output_folder = f"../exports/05b_llm_{llm_type}_{dataset}_v{prompt_version}/{ET}"
+
+for ET in event_types_local:    
+    output_folder = f"../exports/05b_llm_{llm_type}_{dataset}_v{prompt_version}{"_fa" if fine_analysis else ""}/{ET}"
     for attribute_output in attribute_output_raw:
         os.makedirs(f"{output_folder}", exist_ok=True)
-        for analysis_type in ['Sent','Doc']:
+        for analysis_type in analysis_types:
             if analysis_type == 'Sent':
                 id_type = 'UID'
             elif analysis_type == 'Doc':
@@ -82,7 +94,7 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
             except:
                 print(f"No file found for {ET}")
                 continue
-            df_date=pd.read_pickle("../exports/04_dictionary_features.pkl")
+            df_date=pd.read_pickle("../exports/04b_dictionary_features.pkl")
             df_date[id_type] = df_date[id_type].astype(str)
             df_date['CHARTTIME'] = pd.to_datetime(df_date['CHARTTIME'])
             df_date['STORETIME'] = pd.to_datetime(df_date['STORETIME'])
@@ -102,7 +114,8 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
             df['DCT'] = [(r['CHARTTIME'], r['STORETIME']) for _,r in df.iterrows()]
             print(f"------------{df.STORETIME-df.CHARTTIME}")
             print(analysis_type, len(df))
-            # df = df[df[id_type].isin(focus_ids[analysis_type])]
+            if fine_analysis:
+                df = df[df[id_type].isin(evaluation_focus_ids[analysis_type])]
             print(analysis_type, len(df))
             if analysis_type == 'Sent':
                 df_temp = df.copy()
@@ -120,7 +133,7 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
             print(f"Event Type: {ET} | Rows: {len(df_temp)} | Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | File: {file_name}")
             print(f'attribute_output:{attribute_output}, Time Start: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
             evidence={'keywords':df_temp.Keyword.tolist(), 'event_names':df_temp.Event_Name.tolist(), 'dct':df_temp.DCT.tolist()}
-            for keyword_input, example_input in [i for i in product([False],[True])]:
+            for keyword_input, example_input in [i for i in product(kw_input_types,ex_input_types)]:
                 print(f"keyword_input:{keyword_input}, example_input:{example_input}, attribute_output:{attribute_output}, analysis_type:{analysis_type}")
                 col_suffix = get_col_suffix(keyword_input, example_input)
                 event_extractor_object = EventExtractor(event_name_model_type="llm",attribute_model_type="None",llm_type=llm_type)
@@ -151,6 +164,6 @@ for ET in ['Sleep','Excretion','Eating','Family','Pain'][:1]:
                 try:
                     df_temp.to_excel(f"{output_folder}/{file_name}_att_{attribute_output}.xlsx", index=False)
                 except:
-                    print(f"Wrror in {output_folder}/{file_name}_att_{attribute_output}.xlsx")
+                    print(f"Error in {output_folder}/{file_name}_att_{attribute_output}.xlsx")
                 df_temp.to_pickle(f"{output_folder}/{file_name}_att_{attribute_output}.pkl")
                 

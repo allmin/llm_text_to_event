@@ -8,7 +8,7 @@
 #SBATCH --partition=gpu_h100
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=180G
-#SBATCH --time=12:00:00
+#SBATCH --time=24:00:00
 #SBATCH --signal=B:USR1@60
 
 # -----------------------------
@@ -64,7 +64,7 @@ export $(grep -v '^#' .env | xargs)
 # -----------------------------
 nvidia-smi
 cd scripts
-python 05_run_llm_on_P-SET.py --attribute_output True
+python 05_run_llm_on_P-SET.py --attribute_output True --fine_analysis
 nvidia-smi
 # python event_extractor.py
 # sbatch --mail-type=ALL --mail-user=a.p.s.susaiyah@tue.nl run_llm_snellius.sh
