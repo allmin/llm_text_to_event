@@ -20,8 +20,6 @@ from config import event_types, event_descriptions
 
 import streamlit as st
 
-
-
 analysis_types = ['Sent','Doc']
 kw_input_types = [False]
 ex_input_types = [True]
@@ -34,7 +32,7 @@ attribute_output = True
 
 input_to_analyse = [st.text_input("Enter Text Fragment","")]
 llm_type=st.text_input("LLM_Type","llama3.1:70b")
-evidence=None
+evidence={'keywords':[], 'event_names':[], 'dct':[('2167-05-18 05:26:00','2167-05-18 05:33:00')]}
 prompt_version = st.selectbox("Prompt version",options=[2,3,4],index=2)
 keyword_input = st.radio("Keyword_input",options=[True, False], index=1)
 example_input = st.radio("Example_input",options=[True, False], index=1)
