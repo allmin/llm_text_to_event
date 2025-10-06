@@ -569,6 +569,12 @@ def get_output_rules(attribute_output, prompt_version):
                         * For events like Family, if the event is negated (e.g. "no family member visited"), it is ignored and not 
                         included in the output. 
                         """
-    elif prompt_version in [4,5]:
+    elif prompt_version in [4]:
         output_rules = ''
+    elif prompt_version in [5]:
+        output_rules = """**Note:**
+                        - Sedation and resting are not a sleep event.
+                        - Sleep apnea occurs during sleep.
+                        - people 'wake' up from sleep.
+                        """
     return output_rules

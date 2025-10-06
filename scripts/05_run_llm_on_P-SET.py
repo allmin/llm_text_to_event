@@ -20,7 +20,7 @@ from config import event_types, event_descriptions
 import argparse
 
 
-analysis_types = ['Sent','Doc']
+analysis_types = ['Sent']
 kw_input_types = [False]
 ex_input_types = [True]
 event_types_local = ['Sleep','Excretion','Eating','Family','Pain'][:1]
