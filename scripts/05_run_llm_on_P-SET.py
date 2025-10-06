@@ -27,7 +27,7 @@ event_types_local = ['Sleep','Excretion','Eating','Family','Pain'][:1]
 dataset = 'P-SET'
 prompt_version = 5
 print(f"Prompt Version {prompt_version}")
-llm_type="llama3.1:70b"
+llm_type="llama3.1:70b"#"llama3.1:70b" #llama3:70b-q4_K_M
 
 def get_col_suffix(keyword_input, example_input):
     col_suffix = "no"
@@ -111,6 +111,8 @@ for ET in event_types_local:
             else:
                 df['CHARTTIME'] = pd.to_datetime(df['CHARTTIME'])
                 df['STORETIME'] = pd.to_datetime(df['STORETIME'])
+            df.CHARTTIME = df.CHARTTIME - pd.Timedelta(weeks=54*165)
+            df.STORETIME = df.STORETIME - pd.Timedelta(weeks=54*165)
             df['DCT'] = [(r['CHARTTIME'], r['STORETIME']) for _,r in df.iterrows()]
             print(f"------------{df.STORETIME-df.CHARTTIME}")
             print(analysis_type, len(df))
@@ -122,8 +124,6 @@ for ET in event_types_local:
                 focus_type = "Sentences"
                 gt_column = f"Sent_gt_{ET}"
                 input_to_analyse = df_temp.Sentence.tolist()
-                
-                
             elif analysis_type == 'Doc':
                 df_temp = df.copy()
                 focus_type = "Documents"

@@ -458,7 +458,6 @@ class EventExtractor:
                 event_w_description["Unknown"] = """choose "Unknown" if none of the other event type are applicable."""
             else:
                 event_w_description = self.predefined_event_names_w_unknown
-            event_w_description = "\n".join([f"{k} : {v}" for (k,v) in event_w_description.items()]) if type(event_w_description)==dict else event_w_description
             detected_keywords = self.prompt_evidence['keywords'][ind] if ind < len(self.prompt_evidence['keywords']) else []
             dct = self.prompt_evidence['dct'][ind] if ind < len(self.prompt_evidence['dct']) else []
             prompt = config.get_general_prompt_template(text=text, 

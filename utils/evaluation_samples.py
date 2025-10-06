@@ -25,7 +25,7 @@ for focus in ["Doc", "Sent"]:
         subN = int(sample_per*N)
         finalN= max(1,subN)
         print(file_name, finalN)
-        df_samples = df.sample(n=finalN,replace=False)
+        df_samples = df.sample(n=finalN,replace=False,random_state=42)
         full_df.append(df_samples)
     full_df = pd.concat(full_df).reset_index()
     unique_row_ids = full_df[uid].astype(str).tolist()
