@@ -24,7 +24,7 @@ def get_general_prompt_template(text, predefined_event_names, event_w_descriptio
     keyword_evidence = get_keyword_clause(detected_keywords)
     output_format = get_output_format(predefined_event_names, attribute_output, prompt_version)
     output_rules = get_output_rules(attribute_output,prompt_version)
-    examples = get_examples(attribute_output)
+    examples = get_examples(attribute_output,prompt_version)
     if prompt_version == 1:
         general_prompt_template = f"""Given the text: {text}, 
                                 and the following event types with their definitions: {event_w_description} 
@@ -92,23 +92,33 @@ def get_general_prompt_template(text, predefined_event_names, event_w_descriptio
            {text}
         """
     elif prompt_version == 5:
-        general_prompt_template = f"""
-        **Classification and Attribute Extraction Task** 
-            Classify the Text at the end of this prompt into events that took place at the HOSPITAL, DURING THE SHIFT in which this text was written, 
-            using one or more of the following categories: 
-            {event_w_description}.
-            
-            Conditions: 
-            {classification_rules}
-            For each detected event, output strictly valid JSON following the schema below: 
-            ```
-              {output_format}  
-            ```
-           {output_rules}
-           
-           Text (written between {dct[0]} and {dct[1]}):
-           {text}
-        """
+
+        lines = ["Category\tDefinition"]
+        for k, v in event_w_description.items():
+            lines.append(f"{k}\t{v}")
+        event_w_description_mod = "\n".join(lines)
+
+        
+        
+        
+        general_prompt_template = f"""**Task: Event Classification and Attribute Extraction** 
+Your task is to analyze the Text below and extract all events that occurred during the current hospital shift (the time the note was written).
+Classify each event into one or more of the following categories:
+{event_w_description_mod}.
+
+**Rules and Conditions** 
+{classification_rules}
+For each detected event, output strictly valid JSON following the schema below: 
+```
+    {output_format}  
+```
+**Examples for Sleep Classification**
+{examples}
+
+**Text**
+Written between {dct[0]} and {dct[1]}:
+'{text}'
+"""
         
         
     return general_prompt_template
@@ -166,229 +176,248 @@ def get_keyword_clause(detected_keywords):
         Additional facts: A keyword matching algorithm without context detected keyword(s) {detected_keywords}.
         Use this only as a pointer. If context contradicts, ignore."""
 
-def get_examples(attribute_output):
-    examples_base = """
-                ---
-                Examples:
+def get_examples(attribute_output,prompt_version):
+    if prompt_version==5:
+        examples_base = """
+                1. Include as Sleep Event**
+                - "Patient slept for 2 hours."
+                - "Patient did not sleep last night" (set "negation": true)
+                - "heart rate 50pbm while asleep"
+                - "patient now awake" (awake "now" assumes the patient was sleeping at an earlier state)
+                - "Patient took ambien for sleep with good effect" (good effect/effect means the medicine worked and the patient slept)
                 
-                text: "Patient ate breakfast this morning. He seems less anxious."
-                output: {
-                "events": [
-                    {"event_id": "e1",
-                    "event_type": "Eating",
-                    "text_quote":"Patient ate breakfast this morning"
+                2. Do NOT include as Sleep Event**
+                - "Patient asked for sleeping pill." (Request, not event)
+                - "Patient wants to sleep later." (Future plan)
+                - "Patient fell asleep while driving (history)." (Before shift)
+                - "Patient was sedated/put to sleep for procedure." (Sedation)
+                - "Daughter slept in the room." (Actor ≠ patient)
+                - "Patient Alert and Awake" (Although awake is mentioned, it is not in the context of a status change from sleep but as an observation)"""
+        examples_Ao = examples_base
+    else:
+        examples_base = """
+                    ---
+                    Examples:
+                    
+                    text: "Patient ate breakfast this morning. He seems less anxious."
+                    output: {
+                    "events": [
+                        {"event_id": "e1",
+                        "event_type": "Eating",
+                        "text_quote":"Patient ate breakfast this morning"
+                        }
+                    ],
+                    "order":[]
                     }
-                ],
-                "order":[]
-                }
-                
-                text: "Patient reported severe abdominal pain."
-                output: {
-                "events": [
-                    {"event_id": "e1",
-                    "event_type": "Pain",
-                    "text_quote": "severe abdominal Pain"
+                    
+                    text: "Patient reported severe abdominal pain."
+                    output: {
+                    "events": [
+                        {"event_id": "e1",
+                        "event_type": "Pain",
+                        "text_quote": "severe abdominal Pain"
+                        }
+                    ],
+                    "order":[]
                     }
-                ],
-                "order":[]
-                }
-                
-                text: "Patient called his son around 3 pm."
-                output: {
-                "events": [
-                    {"event_id": "e1",
-                    "event_type": "Family",
-                    "text_quote": "called his son around 3 pm"
+                    
+                    text: "Patient called his son around 3 pm."
+                    output: {
+                    "events": [
+                        {"event_id": "e1",
+                        "event_type": "Family",
+                        "text_quote": "called his son around 3 pm"
+                        }
+                    ],
+                    "order":[]
                     }
-                ],
-                "order":[]
-                }
-                
-                text: "Patient had a loose stool overnight."
-                output: {
-                "events": [
-                    {"event_id": "e1",
-                    "event_type": "Excretion",
-                    "text_quote": "loose stool overnight"
+                    
+                    text: "Patient had a loose stool overnight."
+                    output: {
+                    "events": [
+                        {"event_id": "e1",
+                        "event_type": "Excretion",
+                        "text_quote": "loose stool overnight"
+                        }
+                    ],
+                    "order":[]
                     }
-                ],
-                "order":[]
-                }
-                
-                text: "Patient was able to sleep well last night."
-                output: {
-                "events": [
-                    {"event_id": "e1",
-                    "event_type": "Sleep",
-                    "text_quote": "sleep well last night"
+                    
+                    text: "Patient was able to sleep well last night."
+                    output: {
+                    "events": [
+                        {"event_id": "e1",
+                        "event_type": "Sleep",
+                        "text_quote": "sleep well last night"
+                        }
+                    ],
+                    "order":[]
                     }
-                ],
-                "order":[]
-                }
-                
-                text: "The patient couldn\'t sleep due to severe pain."
-                output: {
-                "events": [
-                    {"event_id": "e1",
-                    "event_type": "Pain",
-                    "text_quote": "severe pain"
+                    
+                    text: "The patient couldn\'t sleep due to severe pain."
+                    output: {
+                    "events": [
+                        {"event_id": "e1",
+                        "event_type": "Pain",
+                        "text_quote": "severe pain"
+                        }
+                    ],
+                    "order":[]
                     }
-                ],
-                "order":[]
-                }
-                
-                text: "The patient complained of severe back pain, was given Tylenol, but the pain persisted and he was then prescribed stronger morphine."
-                output: {
-                "events": [
-                    {"event_id": "e1",
-                    "event_type": "Pain",
-                    "text_quote": "complained of severe back pain"
-                    },
-                    {"event_id": "e2",
-                    "event_type": "Pain",
-                    "text_quote": "pain persisted"
+                    
+                    text: "The patient complained of severe back pain, was given Tylenol, but the pain persisted and he was then prescribed stronger morphine."
+                    output: {
+                    "events": [
+                        {"event_id": "e1",
+                        "event_type": "Pain",
+                        "text_quote": "complained of severe back pain"
+                        },
+                        {"event_id": "e2",
+                        "event_type": "Pain",
+                        "text_quote": "pain persisted"
+                        }
+                    ],
+                    "order":[]
                     }
-                ],
-                "order":[]
-                }
-                """
-    examples_Ao = """
-                ---
-                Examples:
-                
-                text: "Patient ate breakfast this morning. He seems less anxious."
-                output: {
-                "events": [
-                    {"event_id": "e1",
-                    "event_type": "Eating",
-                    "text_quote":"Patient ate breakfast this morning",
-                    "attributes": {"food": "breakfast", 
-                                   "amount": "Unknown",
-                                   "method": "Unknown",
-                                   "negation": "false",
-                                   "time":"morning",
-                                   "caused_by":"Unknown"}
-                    }
-                ],
-                "order":[]
-                }
-                
-                text: "Patient reported severe abdominal pain."
-                output: {
-                "events": [
-                    {"event_id": "e1",
-                    "event_type": "Pain",
-                    "text_quote": "severe abdominal Pain",
-                    "attributes": {"severity": "severe", 
-                                   "location": "abdominal",
-                                   "duration": "Unknown",
-                                   "negation": "false",
-                                   "time":"Unknown",
-                                   "caused_by":"Unknown"}
-                    }
-                ],
-                "order":[]
-                }
-                
-                text: "Patient called his son around 3 pm."
-                output: {
-                "events": [
-                    {"event_id": "e1",
-                    "event_type": "Family",
-                    "text_quote": "called his son around 3 pm",
-                    "attributes": {"interaction": "call", 
-                                    "relation": "son",
+                    """
+        examples_Ao = """
+                    ---
+                    Examples:
+                    
+                    text: "Patient ate breakfast this morning. He seems less anxious."
+                    output: {
+                    "events": [
+                        {"event_id": "e1",
+                        "event_type": "Eating",
+                        "text_quote":"Patient ate breakfast this morning",
+                        "attributes": {"food": "breakfast", 
+                                    "amount": "Unknown",
+                                    "method": "Unknown",
                                     "negation": "false",
-                                    "time":"3 pm",
+                                    "time":"morning",
                                     "caused_by":"Unknown"}
+                        }
+                    ],
+                    "order":[]
                     }
-                ],
-                "order":[]
-                }
-                
-                text: "Patient had a loose stool overnight."
-                output: {
-                "events": [
-                    {"event_id": "e1",
-                    "event_type": "Excretion",
-                    "text_quote": "loose stool overnight",
-                    "attributes": {"type": "stool", 
-                                   "quality": "loose", 
-                                   "frequency":"overnight", 
-                                   "negation": "false",
-                                   "time":"night",
-                                   "caused_by":"Unknown"}
+                    
+                    text: "Patient reported severe abdominal pain."
+                    output: {
+                    "events": [
+                        {"event_id": "e1",
+                        "event_type": "Pain",
+                        "text_quote": "severe abdominal Pain",
+                        "attributes": {"severity": "severe", 
+                                    "location": "abdominal",
+                                    "duration": "Unknown",
+                                    "negation": "false",
+                                    "time":"Unknown",
+                                    "caused_by":"Unknown"}
+                        }
+                    ],
+                    "order":[]
                     }
-                ],
-                "order":[]
-                }
-                
-                text: "Patient was able to sleep well last night."
-                output: {
-                "events": [
-                    {"event_id": "e1",
-                    "event_type": "Sleep",
-                    "text_quote": "sleep well last night",
-                    "attributes": {"quality": "well",
-                                    "duration": "Unknown", 
+                    
+                    text: "Patient called his son around 3 pm."
+                    output: {
+                    "events": [
+                        {"event_id": "e1",
+                        "event_type": "Family",
+                        "text_quote": "called his son around 3 pm",
+                        "attributes": {"interaction": "call", 
+                                        "relation": "son",
+                                        "negation": "false",
+                                        "time":"3 pm",
+                                        "caused_by":"Unknown"}
+                        }
+                    ],
+                    "order":[]
+                    }
+                    
+                    text: "Patient had a loose stool overnight."
+                    output: {
+                    "events": [
+                        {"event_id": "e1",
+                        "event_type": "Excretion",
+                        "text_quote": "loose stool overnight",
+                        "attributes": {"type": "stool", 
+                                    "quality": "loose", 
+                                    "frequency":"overnight", 
                                     "negation": "false",
                                     "time":"night",
                                     "caused_by":"Unknown"}
+                        }
+                    ],
+                    "order":[]
                     }
-                ],
-                "order":[]
-                }
-                
-                text: "The patient couldn\'t sleep due to severe pain."
-                output: {
-                "events": [
-                    {"event_id": "e1",
-                    "event_type": "Sleep",
-                    "text_quote": "couldn\'t sleep",
-                    "attributes": {"quality": "poor", 
-                                    "duration": "Unknown",
-                                    "negation": "true",
-                                    "time":"Unknown",
-                                    "caused_by":"Pain"}
-                    },
-                    {"event_id": "e2",
-                    "event_type": "Pain",
-                    "text_quote": "severe pain",
-                    "attributes": {"severity": "severe", 
-                                    "location": "Unknown", 
-                                    "duration": "Unknown", 
-                                    "time":"Unknown",
-                                    "caused_by":"Unknown"}
+                    
+                    text: "Patient was able to sleep well last night."
+                    output: {
+                    "events": [
+                        {"event_id": "e1",
+                        "event_type": "Sleep",
+                        "text_quote": "sleep well last night",
+                        "attributes": {"quality": "well",
+                                        "duration": "Unknown", 
+                                        "negation": "false",
+                                        "time":"night",
+                                        "caused_by":"Unknown"}
+                        }
+                    ],
+                    "order":[]
                     }
-                ],
-                "order":["e1", "after", "e2"]
-                }
-                
-                text: "The patient complained of severe back pain, was given Tylenol, but the pain persisted and he was then prescribed stronger morphine."
-                output: {
-                "events": [
-                    {"event_id": "e1",
-                    "event_type": "Pain",
-                    "text_quote": "complained of severe back pain",
-                    "attributes": {"severity": "severe", 
+                    
+                    text: "The patient couldn\'t sleep due to severe pain."
+                    output: {
+                    "events": [
+                        {"event_id": "e1",
+                        "event_type": "Sleep",
+                        "text_quote": "couldn\'t sleep",
+                        "attributes": {"quality": "poor", 
+                                        "duration": "Unknown",
+                                        "negation": "true",
+                                        "time":"Unknown",
+                                        "caused_by":"Pain"}
+                        },
+                        {"event_id": "e2",
+                        "event_type": "Pain",
+                        "text_quote": "severe pain",
+                        "attributes": {"severity": "severe", 
+                                        "location": "Unknown", 
+                                        "duration": "Unknown", 
+                                        "time":"Unknown",
+                                        "caused_by":"Unknown"}
+                        }
+                    ],
+                    "order":["e1", "after", "e2"]
+                    }
+                    
+                    text: "The patient complained of severe back pain, was given Tylenol, but the pain persisted and he was then prescribed stronger morphine."
+                    output: {
+                    "events": [
+                        {"event_id": "e1",
+                        "event_type": "Pain",
+                        "text_quote": "complained of severe back pain",
+                        "attributes": {"severity": "severe", 
+                                        "location": "back",
+                                        "duration": "Unknown", 
+                                        "time":"Unknown",
+                                        "caused_by":"Unknown"}
+                        },
+                        {"event_id": "e2",
+                        "event_type": "Pain",
+                        "text_quote": "pain persisted",
+                        "attributes": {"severity": "severe", 
                                     "location": "back",
-                                    "duration": "Unknown", 
-                                    "time":"Unknown",
+                                    "duration": "persistent", 
+                                    "time":"after Tylenol",
                                     "caused_by":"Unknown"}
-                    },
-                    {"event_id": "e2",
-                    "event_type": "Pain",
-                    "text_quote": "pain persisted",
-                    "attributes": {"severity": "severe", 
-                                   "location": "back",
-                                   "duration": "persistent", 
-                                   "time":"after Tylenol",
-                                   "caused_by":"Unknown"}
+                        }
+                    ],
+                    "order":[["e1", "before", "e2"]]
                     }
-                ],
-                "order":[["e1", "before", "e2"]]
-                }
-                """
+                    """
+    
     if attribute_output:
         return examples_Ao
     else:
@@ -432,10 +461,19 @@ def get_classification_rules(attribute_output, prompt_version):
         classification_rules.append("Consider events ONLY if they relate to the patient as the actor (e.g., exclude caregivers' or family members' own experiences).")
         classification_rules.append("If the text has unclear actor, assume it as patient.")
     elif prompt_version == 5:
-        classification_rules.append("If the event talks about a patient's history (before the shift) or future plan/request of an event (after the shift), DO NOT EXTRACT that event.")
-        classification_rules.append("Consider events ONLY if they relate to the patient as the actor (e.g., exclude caregivers' or family members' own experiences).")
-        classification_rules.append("""An event is extracted from the text even if it is negated (e.g. "did not sleep"), but the respective negation attribute is set to True.""")
-        classification_rules.append("If the text has unclear actor, assume it as patient.")
+        classification_rules.append("1. Time constraint: Consider only actions that occurred during the current shift as events. ")
+        classification_rules.append("2. Event constraint: Consider patient history, planning and requests as case attributes. Log them seperately. ")
+        classification_rules.append("3. Actor constraint: Find out who is the main actor of the event.")
+        classification_rules.append("""4. Negation Rule: Extract an event even if negated (e.g. “did not sleep”), and set "negation": true.""")
+        classification_rules.append("""5. Default Assumptions: 
+        - If actor unclear → "actor":"patient"
+        - If time not mentioned → "time": "Unknown" 
+        - If cause not mentioned → "caused_by": "Unknown" """)
+        classification_rules.append("""6. Clarifications:
+        - Sedation/resting ≠ sleep events.
+        - Sleep apnea occurs during sleep.
+        - Actions done to enable an event do not imply the event occurred (e.g., “given med for sleep” ≠ sleep).""")
+        classification_rules = "\n".join(classification_rules)
     return classification_rules
 
 def get_output_format(predefined_event_names, attribute_output, prompt_version):
@@ -459,8 +497,7 @@ def get_output_format(predefined_event_names, attribute_output, prompt_version):
     elif prompt_version in [2,3,4,5]:
         attribute_specs = ""
         if attribute_output:
-            attribute_specs = """
-            "event_attributes": { 
+            attribute_specs = """"event_attributes": { 
                             // Only extract attributes for events present in the text:
                             "Sleep": { 
                             "quality": string (e.g., poor, good, etc.),
@@ -488,12 +525,12 @@ def get_output_format(predefined_event_names, attribute_output, prompt_version):
         if prompt_version in [2,3]:
             output_format = """
                         {   
-                        "case_attributes":[ // all properties of the patients case that ocurred before the shift or at home or patient history.
+                        "case_attributes":[ // all patient-related details that did NOT occur during the current hospital shift, including past history, future plans, or events that happened at home or outside the hospital.
                             {
                             "attribute_name":"attribute_value" // attributes of the case such as patient history.
                             }
                         ]  
-                        "events": [ //events occurreing during the shift of the clinical narrative
+                        "events": [ //events occurring during the shift
                             { 
                             "event_id": string, ("e1", "e2", etc.)
                             "event_type": string ("Sleep", "Excretion", "Eating", "Family", "Pain", "Unknown"), 
@@ -518,12 +555,14 @@ def get_output_format(predefined_event_names, attribute_output, prompt_version):
         elif prompt_version in [4,5]:
             output_format = """
                         {   
-                        "case_attributes":[ // all properties of the patients case that ocurred before the shift or at home or patient history or plan.
+                        "case_attributes":[ 
+                        //all patient-related details that did NOT occur during the current hospital shift, including past history, future plans, or events that happened at home or outside the hospital.
                             {
-                            "attribute_name":"attribute_value" // attributes of the case such as patient history.
+                            "attribute_name":"attribute_value" 
                             }
                         ]  
-                        "events": [ //events occurred/occurring DURING THE SHIFT
+                        "events": [ 
+                        //events occurred/occurring DURING THE SHIFT
                             { 
                             "event_id": string, ("e1", "e2", etc.)
                             "event_type": string ("Sleep", "Excretion", "Eating", "Family", "Pain", "Unknown"), 
@@ -537,7 +576,8 @@ def get_output_format(predefined_event_names, attribute_output, prompt_version):
                             } 
                             } 
                         ], 
-                        "order": [ //partial order of extracted events
+                        "order": [ 
+                        //partial order of extracted events
                             { 
                             "event_id_1": string, (e1, e2...)
                             "relation": string ("before", "after", "simultaneous", "unknown"), 
@@ -572,9 +612,21 @@ def get_output_rules(attribute_output, prompt_version):
     elif prompt_version in [4]:
         output_rules = ''
     elif prompt_version in [5]:
-        output_rules = """**Note:**
-                        - Sedation and resting are not a sleep event.
-                        - Sleep apnea occurs during sleep.
-                        - people 'wake' up from sleep.
-                        """
+        output_rules = ""
     return output_rules
+    
+    
+    
+    
+if __name__ == "__main__":
+    prompt_version = 5
+    prompt = get_general_prompt_template(text="The patient slept well", 
+                                                predefined_event_names=event_types + ['Unknown'], 
+                                                prompt_version=prompt_version, 
+                                                event_w_description=event_descriptions, 
+                                                attribute_output=True, 
+                                                keyword_input=False, 
+                                                example_input=True, 
+                                                detected_keywords="",
+                                                dct=('5AM','6PM'))
+    print(prompt)
