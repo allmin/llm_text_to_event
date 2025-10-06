@@ -164,15 +164,17 @@ for i, row in subset.iterrows():
     current_good_example = df.loc[i, "good_example"]
     current_negation = df.loc[i, "negation"]
     current_comment = df.loc[i, "comment"]
+    current_is_patient = df.loc[i,"is_patient"]
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         new_negation = st.checkbox("is event negated?", value=current_negation, key=f"negation_{page}_{i}")
     with col2:
         new_good_example = st.checkbox("Good Example For Paper", value=current_good_example, key=f"good_example_{page}_{i}")
     with col3:
         new_comment = st.text_input("Comment", value=current_comment, key=f"comment_{page}_{i}")
-    
+    with col4:
+        new_is_patient = st.checkbox("Is Patient?", value=current_is_patient, key=f"is_patient_{page}_{i}")
     
     if new_good_example != current_good_example:
         df.at[i, "good_example"] = new_good_example
@@ -186,6 +188,11 @@ for i, row in subset.iterrows():
     
     if new_comment != current_comment:
         df.at[i, "comment"] = new_comment
+        save_data(df)
+        st.cache_data.clear()
+        
+    if new_is_patient != current_is_patient:
+        df.at[i, "is_patient"] = new_is_patient
         save_data(df)
         st.cache_data.clear()
 
