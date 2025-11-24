@@ -36,6 +36,8 @@ def load_data(path):
         df["negation"] = False
     if "good_example" not in df.columns:
         df["good_example"] = False
+    if "Sent_gt_Family" not in df.columns:
+        df["Sent_gt_Family"] = df.Event_Name.apply(lambda x: "Family" in x)
     if "comment" not in df.columns:
         df['comment'] = ''
     if "is_patient" not in df.columns:
@@ -165,6 +167,7 @@ for i, row in subset.iterrows():
     current_negation = df.loc[i, "negation"]
     current_comment = df.loc[i, "comment"]
     current_is_patient = df.loc[i,"is_patient"]
+    current_Sent_gt_Family = df.loc[i,"Sent_gt_Family"]
     
     col1, col2, col3, col4 = st.columns(4)
     with col1:
